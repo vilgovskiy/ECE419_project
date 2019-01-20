@@ -32,6 +32,12 @@ public interface KVMessage {
 	 */
 	public StatusType getStatus();
 	
+	public void setKey(String key);
+
+	public void setValue(String value);
+
+	public void setStatus(StatusType status);
+
 }
 
 
