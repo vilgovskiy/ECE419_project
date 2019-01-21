@@ -4,6 +4,7 @@ package app_kvServer;
 import org.apache.log4j.Logger;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.ServerSocket;
 
 public class KVServer implements IKVServer {
@@ -94,7 +95,8 @@ public class KVServer implements IKVServer {
 
     @Override
     public void run() {
-        // TODO Auto-generated method stub
+        running = initializeKVServer();
+
     }
 
     @Override
@@ -105,5 +107,20 @@ public class KVServer implements IKVServer {
     @Override
     public void close() {
         // TODO Auto-generated method stub
+    }
+
+    private boolean initializeKVServer(){
+        logger.info("Starting the KVSertver");
+        try {
+            serverSocket = new ServerSocket(port);
+            logger.info("Server listening on the port" + serverSocket.getLocalPort());
+            return true;
+        } catch (IOException e){
+            logger.error("Cannot open server socket:");
+            if(e instanceof BindException){
+                logger.error("Port " + port + " is already bound!");
+            }
+            return false;
+        }
     }
 }
