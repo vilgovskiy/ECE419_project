@@ -13,7 +13,7 @@ public class KVServer implements IKVServer {
 
     private int port;
     private int cacheSize;
-    private String strategy;
+    private CacheStrategy strategy;
     private boolean running;
     private ServerSocket serverSocket;
 
@@ -32,32 +32,31 @@ public class KVServer implements IKVServer {
     public KVServer(int port, int cacheSize, String strategy) {
         this.port = port;
         this.cacheSize = cacheSize;
-        this.strategy = strategy;
+        this.strategy = CacheStrategy.valueOf(strategy);
         logger.info("Creating an instance of the KV server");
     }
 
     @Override
     public int getPort() {
-        // TODO Auto-generated method stub
-        return -1;
+        return port;
     }
 
     @Override
     public String getHostname() {
-        // TODO Auto-generated method stub
+        if (serverSocket != null) {
+            return serverSocket.getInetAddress().getHostName();
+        }
         return null;
     }
 
     @Override
     public CacheStrategy getCacheStrategy() {
-        // TODO Auto-generated method stub
-        return IKVServer.CacheStrategy.None;
+        return strategy;
     }
 
     @Override
     public int getCacheSize() {
-        // TODO Auto-generated method stub
-        return -1;
+        return cacheSize;
     }
 
     @Override
