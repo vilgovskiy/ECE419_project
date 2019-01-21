@@ -6,7 +6,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
-public class KVServerConnection {
+public class KVServerConnection implements Runnable {
     private static Logger logger = Logger.getRootLogger();
 
     private boolean isOpen;
@@ -26,4 +26,8 @@ public class KVServerConnection {
         this.isOpen = true;
     }
 
+    @Override
+    public void run() {
+        
+    }
 }
