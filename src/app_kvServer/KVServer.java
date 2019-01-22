@@ -3,6 +3,7 @@ package app_kvServer;
 
 import org.apache.log4j.Logger;
 import server.KVClientConnection;
+import server.KVStorage;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -81,7 +82,10 @@ public class KVServer implements IKVServer {
 
     @Override
     public void putKV(String key, String value) throws Exception {
+        if (value.isEmpty()){
+            logger.info("Delet KV with key: " + key);
 
+        }// else if (inStorage(key))
     }
 
     @Override
