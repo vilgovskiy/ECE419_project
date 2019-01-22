@@ -1,30 +1,36 @@
 package app_kvClient;
 
 import java.io.BufferedReader;
+import java.io.InputStreamReader;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-
 import logger.LogSetup;
 
-import client.KVCommInterface;
-import share.messages.KVMessage;
+import java.io.IOException;
+import java.net.UnknownHostException;
 
-public class KVClient implements IKVClient {
+import client.KVCommInterface;
+import client.KVStore;
+import shared.messages.KVMessage;
+
+
+
+public class KVClient implements IKVClient, Runnable {
 
     private static Logger logger = Logger.getRootLogger();
     private static final String PROMPT = "Client> ";
     private BufferedReader stdin;
-    private KVCommInterface store = null;
+    private KVStore store = null;
     private boolean stop = false;
     
     private String serverAddr;
     private int serverPort;
 
-
+    @Override
     public void run(){
         while(!stop) {
-            stdin = new BufferReader(new InputStreamReader(System.in));
+            stdin = new BufferedReader(new InputStreamReader(System.in));
             System.out.print(PROMPT);
 
             try {
@@ -47,7 +53,7 @@ public class KVClient implements IKVClient {
                 if (token.length == 3) {
                     try {
                         serverAddr = token[1];
-                        serverPort = token[2];
+                        serverPort = Integer.parseInt(token[2]);
                         newConnection(serverAddr, serverPort);
                     } catch(NumberFormatException nfe) {
                         printError("No valid address. Port must be a number!");
@@ -58,7 +64,11 @@ public class KVClient implements IKVClient {
                     } catch (IOException ioe) {
                         printError("Could not establish connection!");
                         logger.warn("Could not establish connection!", ioe);
+                    } catch (Exception e) {
+                        printError("Unknown error!");
+                        logger.warn("Unknown error!", e);
                     }
+                    
                 } else {
                     printError("Invalid number of parameters!");
                 }
@@ -70,7 +80,7 @@ public class KVClient implements IKVClient {
 
             case "get":
                 if (token.length == 2) {
-                    if (store && store.isRunning()){
+                    if (store != null && store.isRunning()){
                         try {
                             store.get(token[1]);
                         } catch (Exception e) {
@@ -84,7 +94,7 @@ public class KVClient implements IKVClient {
             
             case "put":
                 if (token.length == 3) {
-                    if (store && store.isRunning()){
+                    if (store != null && store.isRunning()){
                         try {
                             store.put(token[1], token[2]);
                         } catch (Exception e) {
@@ -97,8 +107,8 @@ public class KVClient implements IKVClient {
                 break;
 
             case "logLevel":
-                if(tokens.length == 2) {
-			    	String level = setLevel(tokens[1]);
+                if(token.length == 2) {
+			    	String level = setLevel(token[1]);
 			    	if(level.equals(LogSetup.UNKNOWN_LEVEL)) {
 			    		printError("No valid log level!");
 			    		printPossibleLogLevels();
@@ -128,7 +138,7 @@ public class KVClient implements IKVClient {
     }
 
     @Override
-    public void newConnection(String hostname, int port) throws Exception{
+    public void newConnection(String hostname, int port) throws Exception {
         try {
             store = new KVStore(hostname, port);
             store.connect();
@@ -138,11 +148,11 @@ public class KVClient implements IKVClient {
     }
 
     private void closeConnection() {
-        if (store) {
+        if (store != null) {
             store.disconnect();
             store = null;
         }
-    } 
+    }
 
     @Override
     public KVCommInterface getStore(){

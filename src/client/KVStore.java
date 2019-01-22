@@ -1,10 +1,16 @@
 package client;
 
+import java.net.Socket;
+
+import shared.communication.AbstractCommunication;
 import shared.messages.KVMessage;
+import shared.messages.JsonMessage;
 
 import org.apache.log4j.Logger;
 
-public class KVStore implements KVCommInterface {
+import java.io.IOException;
+
+public class KVStore extends AbstractCommunication implements KVCommInterface {
 
 	private Logger logger = Logger.getRootLogger();
 	private boolean running;
@@ -12,8 +18,6 @@ public class KVStore implements KVCommInterface {
 	private int port;
 
 	private Socket clientSocket;
-	private OutputStream output;
-	private InputStream input;
 
 	/**
 	 * Initialize KVStore with address and port of KVServer
@@ -27,11 +31,11 @@ public class KVStore implements KVCommInterface {
 
 	@Override
 	public void connect() throws Exception {
-		if (clientSocket) {
+		if (clientSocket != null) {
 			logger.info("connection already established");
 		}
 		else {
-			clientSocket = Socket(address, port);
+			clientSocket = new Socket(address, port);
 			setRunning(true);
 			logger.info("Connection Established");	
 		}
@@ -42,7 +46,7 @@ public class KVStore implements KVCommInterface {
 		logger.info("try to close connection ...");
 		try {
 			logger.info("tearing down connection ...");
-			if (clientSocket){
+			if (clientSocket != null ){
 				clientSocket.close();
 				clientSocket = null;
 				setRunning(false);
@@ -53,14 +57,20 @@ public class KVStore implements KVCommInterface {
 		}
 	}
 
+	// TODO: implement request using send/receivemessage
+	public void request(KVMessage reqMessage) {
+
+	}
+
+
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
-		return null;
+		return new JsonMessage(KVMessage.StatusType.PUT, key, value);
 	}
 
 	@Override
 	public KVMessage get(String key) throws Exception {
-		return null;
+		return new JsonMessage(KVMessage.StatusType.GET, key, "");
 	}
 
 	public boolean isRunning(){
