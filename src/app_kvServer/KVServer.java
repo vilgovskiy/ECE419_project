@@ -118,12 +118,18 @@ public class KVServer implements IKVServer {
 
     @Override
     public void kill() {
-        // TODO Auto-generated method stub
+        this.running = false;
+        try {
+            serverSocket.close();
+        } catch (IOException e) {
+            logger.error("Failed to close socket!");
+        }
     }
 
     @Override
     public void close() {
-        // TODO Auto-generated method stub
+        kill();
+        //TODO Might also need to wipe cache and remove all connections
     }
 
     private boolean initializeKVServer() {
