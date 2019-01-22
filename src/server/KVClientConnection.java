@@ -1,4 +1,4 @@
-package app_kvServer;
+package server;
 
 import org.apache.log4j.Logger;
 import server.TextMessage;
@@ -8,7 +8,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.Socket;
 
-public class KVServerConnection implements Runnable {
+public class KVClientConnection implements Runnable {
     private static Logger logger = Logger.getRootLogger();
 
     private boolean isOpen;
@@ -24,7 +24,7 @@ public class KVServerConnection implements Runnable {
      *
      * @param clientSocket the Socket object for the client connection.
      */
-    public KVServerConnection(Socket clientSocket) {
+    public KVClientConnection(Socket clientSocket) {
         this.clientSocket = clientSocket;
         this.isOpen = true;
     }

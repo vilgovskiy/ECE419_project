@@ -2,6 +2,7 @@ package app_kvServer;
 
 
 import org.apache.log4j.Logger;
+import server.KVClientConnection;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -101,7 +102,7 @@ public class KVServer implements IKVServer {
             while (isRunning()) {
                 try {
                     Socket client = serverSocket.accept();
-                    KVServerConnection connection = new KVServerConnection(client);
+                    KVClientConnection connection = new KVClientConnection(client);
                     new Thread(connection).start();
 
                     logger.info("Connected to "
