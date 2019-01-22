@@ -58,7 +58,7 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
         JsonMessage json = new Gson().fromJson(jsonData, this.getClass());
         this.status = json.status;
         this.key = json.key;
-        this.status = json.status;
+        this.value = json.value;
     }
 
     @Override

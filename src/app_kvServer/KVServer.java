@@ -81,7 +81,7 @@ public class KVServer implements IKVServer {
 
     @Override
     public void putKV(String key, String value) throws Exception {
-        
+
     }
 
     @Override
@@ -102,7 +102,7 @@ public class KVServer implements IKVServer {
             while (isRunning()) {
                 try {
                     Socket client = serverSocket.accept();
-                    KVClientConnection connection = new KVClientConnection(client);
+                    KVClientConnection connection = new KVClientConnection(this, client);
                     new Thread(connection).start();
 
                     logger.info("Connected to "

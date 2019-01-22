@@ -1,30 +1,35 @@
 package server;
 
+import app_kvServer.IKVServer;
+import com.google.gson.Gson;
 import org.apache.log4j.Logger;
-import server.TextMessage;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+
+import java.io.*;
 import java.net.Socket;
 
-public class KVClientConnection implements Runnable {
+import shared.communication.AbstractCommunication;
+import shared.messages.KVMessage;
+import shared.messages.TextMessage;
+import shared.messages.JsonMessage;
+
+public class KVClientConnection extends AbstractCommunication implements Runnable {
     private static Logger logger = Logger.getRootLogger();
 
+    private IKVServer kvServer;
     private boolean isOpen;
     private static final int BUFFER_SIZE = 1024;
     private static final int DROP_SIZE = 128 * BUFFER_SIZE;
 
     private Socket clientSocket;
-    private InputStream input;
-    private OutputStream output;
 
     /**
      * Constructs a new CientConnection object for a given TCP socket.
      *
      * @param clientSocket the Socket object for the client connection.
      */
-    public KVClientConnection(Socket clientSocket) {
+    public KVClientConnection(IKVServer kvServer, Socket clientSocket) {
+        this.kvServer = kvServer;
         this.clientSocket = clientSocket;
         this.isOpen = true;
     }
@@ -32,19 +37,23 @@ public class KVClientConnection implements Runnable {
     @Override
     public void run() {
         try {
-            output = clientSocket.getOutputStream();
-            input = clientSocket.getInputStream();
+            output = new BufferedOutputStream(clientSocket.getOutputStream());
+            input = new BufferedInputStream(clientSocket.getInputStream());
 
             while (isOpen) {
-//                try {
-//
-//
-//                    /* connection either terminated by the client or lost due to
-//                     * network problems*/
-//                } catch (IOException ioe) {
-//                    logger.error("Error! Connection lost!");
-//                    isOpen = false;
-//                }
+                try {
+                    TextMessage text = receiveMessage();
+                    JsonMessage msg = new JsonMessage();
+                    msg.deserialize(text.getMsg());
+                    JsonMessage response = processMsg(msg);
+
+
+                    /* connection either terminated by the client or lost due to
+                     * network problems*/
+                } catch (IOException ioe) {
+                    logger.error("Error! Connection lost!");
+                    isOpen = false;
+                }
             }
 
         } catch (IOException ioe) {
@@ -62,5 +71,30 @@ public class KVClientConnection implements Runnable {
                 logger.error("Error! Unable to tear down connection!", ioe);
             }
         }
+    }
+
+    private JsonMessage processMsg(JsonMessage msg) {
+        JsonMessage response = new JsonMessage();
+        logger.info("Received message from " + clientSocket.getInetAddress());
+        switch (msg.getStatus()) {
+            case PUT:
+                try {
+                    logger.info("Put request for key:" + msg.getKey() + " value:" + msg.getValue());
+                    kvServer.putKV(msg.getKey(), msg.getValue());
+                } catch (Exception e){
+                    //TODO Add proper handling for this exception
+                }
+                break;
+            case GET:
+                try {
+                    logger.info("Put request for key:" + msg.getKey() + " value:" + msg.getValue());
+                    kvServer.getKV(msg.getKey());
+                } catch (Exception e){
+                    //TODO Add proper handling for this exception
+                }
+                break;
+            default:
+        }
+        return response;
     }
 }
