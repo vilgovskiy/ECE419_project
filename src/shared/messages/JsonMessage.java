@@ -18,6 +18,12 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
         this.value = value;
     }
 
+    public JsonMessage(String status, String key, String value) {
+        this.status = StatusType.valueOf(status);
+        this.key = key;
+        this.value = value;
+    }
+
     @Override
     public String getKey() {
         return key;
@@ -58,12 +64,13 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
         JsonMessage json = new Gson().fromJson(jsonData, this.getClass());
         this.status = json.status;
         this.key = json.key;
-        this.status = json.status;
+        this.value = json.value;
     }
 
     @Override
     public String toString() {
-        return "JSON MSG - STATUS: " + this.status + " KEY: " + this.key + " VALUE: " + this.value;
+        return "JSON MSG - STATUS: " + this.status 
+                + " KEY: " + this.key + " VALUE: " + this.value;
     }
 
 }

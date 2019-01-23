@@ -12,13 +12,13 @@ import java.net.UnknownHostException;
 
 public abstract class AbstractCommunication implements CommunicationInterface {
 
-    protected BufferedInputStream input;
-    protected BufferedOutputStream output;
-
     protected Logger logger = Logger.getRootLogger();
 
-	protected int DROP_SIZE = 40;
-	protected int BUFFER_SIZE = 20;
+    protected BufferedInputStream input;
+	protected BufferedOutputStream output;
+
+	protected static final int BUFFER_SIZE = 1024;
+	protected static final int DROP_SIZE = 1024 * BUFFER_SIZE;
 
 	/**
 	 * Method sends a TextMessage using this socket.

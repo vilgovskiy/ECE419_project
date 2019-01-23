@@ -15,7 +15,6 @@ import client.KVStore;
 import shared.messages.KVMessage;
 
 
-
 public class KVClient implements IKVClient, Runnable {
 
     private static Logger logger = Logger.getRootLogger();
@@ -55,6 +54,8 @@ public class KVClient implements IKVClient, Runnable {
                         serverAddr = token[1];
                         serverPort = Integer.parseInt(token[2]);
                         newConnection(serverAddr, serverPort);
+                        System.out.println("Server Addr: " + serverAddr 
+                                            + ", server port: " + String.valueOf(serverPort));
                     } catch(NumberFormatException nfe) {
                         printError("No valid address. Port must be a number!");
                         logger.info("Unable to parse argument <port>", nfe);
@@ -65,20 +66,21 @@ public class KVClient implements IKVClient, Runnable {
                         printError("Could not establish connection!");
                         logger.warn("Could not establish connection!", ioe);
                     } catch (Exception e) {
-                        printError("Unknown error!");
-                        logger.warn("Unknown error!", e);
+                        printError("Error!");
+                        logger.warn("Error!", e);
                     }
-                    
                 } else {
                     printError("Invalid number of parameters!");
                 }
                 break;
 
             case "disconnect":
+                System.out.println("disconnect");
                 closeConnection();
                 break;
 
             case "get":
+                System.out.println("get");
                 if (token.length == 2) {
                     if (store != null && store.isRunning()){
                         try {
@@ -93,10 +95,14 @@ public class KVClient implements IKVClient, Runnable {
                 break;
             
             case "put":
-                if (token.length == 3) {
+                System.out.println("put");
+                if (token.length == 2 || token.length == 3) {
                     if (store != null && store.isRunning()){
                         try {
-                            store.put(token[1], token[2]);
+                            // delete
+                            if (token.length == 2) store.put(token[1], "");
+                            // put or update
+                            else store.put(token[1], token[2]);
                         } catch (Exception e) {
                             printError("put failed!");
                         }
@@ -128,7 +134,7 @@ public class KVClient implements IKVClient, Runnable {
             case "quit":
                 stop = true;
                 closeConnection();
-                System.out.println(PROMPT + "Application exit!");
+                System.out.println(PROMPT + "Client Application exit!");
                 break;
             
             default: 
@@ -222,6 +228,24 @@ public class KVClient implements IKVClient, Runnable {
     private void printError(String error){
 		System.out.println(PROMPT + "Error! " +  error);
     }
-    
 
+    public String getServerAddr() {
+        return serverAddr;
+    }
+
+    public int getServerPort() {
+        return serverPort;
+    }
+    
+    public static void main(String[] args) {
+    	try {
+			new LogSetup("logs/client.log", Level.OFF);
+			KVClient cli = new KVClient();
+			cli.run();
+		} catch (IOException e) {
+			System.out.println("Error! Unable to initialize logger!");
+			e.printStackTrace();
+			System.exit(1);
+		}
+    }
 }

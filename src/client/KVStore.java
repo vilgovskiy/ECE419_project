@@ -1,10 +1,13 @@
 package client;
 
 import java.net.Socket;
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 
 import shared.communication.AbstractCommunication;
 import shared.messages.KVMessage;
 import shared.messages.JsonMessage;
+import shared.messages.TextMessage;
 
 import org.apache.log4j.Logger;
 
@@ -36,8 +39,10 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		}
 		else {
 			clientSocket = new Socket(address, port);
+			input = new BufferedInputStream(clientSocket.getInputStream());
+			output = new BufferedOutputStream(clientSocket.getOutputStream());
 			setRunning(true);
-			logger.info("Connection Established");	
+			logger.info("connection established");	
 		}
 	}
 
@@ -57,20 +62,34 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		}
 	}
 
-	// TODO: implement request using send/receivemessage
-	public void request(KVMessage reqMessage) {
+	
+	@Override
+	public KVMessage put(String key, String value) throws IOException {
+		logger.info("PUT request to server. Key: " + key + " , Value: " + value);
+		System.out.println("GET request to server. Key: " + key);
 
+		JsonMessage jsonReq = new JsonMessage("PUT", key, value);
+		TextMessage req = new TextMessage(jsonReq.serialize());
+		sendMessage(req);
+		TextMessage resp = receiveMessage();
+		JsonMessage jsonResp = new JsonMessage();
+		jsonResp.deserialize(resp.getMsg());
+		
+		return jsonResp;
 	}
 
-
 	@Override
-	public KVMessage put(String key, String value) throws Exception {
-		return new JsonMessage(KVMessage.StatusType.PUT, key, value);
-	}
+	public KVMessage get(String key) throws IOException {
+		logger.info("GET request to server. Key: " + key);
+		
+		JsonMessage jsonReq = new JsonMessage("GET", key, "");
+		TextMessage req = new TextMessage(jsonReq.serialize());
+		sendMessage(req);
+		TextMessage resp = receiveMessage();
+		JsonMessage jsonResp = new JsonMessage();
+		jsonResp.deserialize(resp.getMsg());
 
-	@Override
-	public KVMessage get(String key) throws Exception {
-		return new JsonMessage(KVMessage.StatusType.GET, key, "");
+		return jsonResp;
 	}
 
 	public boolean isRunning(){
