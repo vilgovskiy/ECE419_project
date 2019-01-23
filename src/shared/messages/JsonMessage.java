@@ -18,11 +18,6 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
         this.value = value;
     }
 
-    public JsonMessage(String status, String key, String value) {
-        this.status = StatusType.valueOf(status);
-        this.key = key;
-        this.value = value;
-    }
 
     @Override
     public String getKey() {

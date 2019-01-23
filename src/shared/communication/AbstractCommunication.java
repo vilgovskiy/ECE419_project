@@ -31,7 +31,8 @@ public abstract class AbstractCommunication implements CommunicationInterface {
 		output.flush();
 		logger.info("Send message:\t '" + msg.getMsg() + "'");
     }
-    
+	
+
 	public TextMessage receiveMessage() throws IOException {
 		int index = 0;
 		byte[] msgBytes = null, tmp = null;
@@ -58,12 +59,6 @@ public abstract class AbstractCommunication implements CommunicationInterface {
 				bufferBytes = new byte[BUFFER_SIZE];
 				index = 0;
 			} 
-			
-			/* only read valid characters, i.e. letters and numbers */
-//			if((read > 31 && read < 127)) {
-//				bufferBytes[index] = read;
-//				index++;
-//			}
 			
 			/* stop reading is DROP_SIZE is reached */
 			if(msgBytes != null && msgBytes.length + index >= DROP_SIZE) {

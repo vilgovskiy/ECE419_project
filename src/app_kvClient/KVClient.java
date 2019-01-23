@@ -19,6 +19,7 @@ public class KVClient implements IKVClient, Runnable {
 
     private static Logger logger = Logger.getRootLogger();
     private static final String PROMPT = "Client> ";
+
     private BufferedReader stdin;
     private KVStore store = null;
     private boolean stop = false;
@@ -42,7 +43,6 @@ public class KVClient implements IKVClient, Runnable {
         }
     }
 
-    // TODO: add KVMessage.statusType for get and put
     private void handleCommand(String cmdLine) {
         String[] token = cmdLine.split("\\s+");
         String cmd = token[0];
@@ -54,8 +54,7 @@ public class KVClient implements IKVClient, Runnable {
                         serverAddr = token[1];
                         serverPort = Integer.parseInt(token[2]);
                         newConnection(serverAddr, serverPort);
-                        System.out.println("Server Addr: " + serverAddr 
-                                            + ", server port: " + String.valueOf(serverPort));
+                        printStatus("connection established to server " + serverAddr + ":" + serverPort);
                     } catch(NumberFormatException nfe) {
                         printError("No valid address. Port must be a number!");
                         logger.info("Unable to parse argument <port>", nfe);
@@ -65,9 +64,9 @@ public class KVClient implements IKVClient, Runnable {
                     } catch (IOException ioe) {
                         printError("Could not establish connection!");
                         logger.warn("Could not establish connection!", ioe);
-                    } catch (Exception e) {
-                        printError("Error!");
-                        logger.warn("Error!", e);
+                    } catch(Exception e) {
+                        printError("Connection is already established!");
+                        logger.warn("Connection is already established!", e);
                     }
                 } else {
                     printError("Invalid number of parameters!");
@@ -75,18 +74,19 @@ public class KVClient implements IKVClient, Runnable {
                 break;
 
             case "disconnect":
-                System.out.println("disconnect");
                 closeConnection();
+                printStatus("disconnect from server " + serverAddr + ":" + serverPort);
                 break;
 
             case "get":
-                System.out.println("get");
                 if (token.length == 2) {
                     if (store != null && store.isRunning()){
                         try {
-                            store.get(token[1]);
-                        } catch (Exception e) {
-                            printError("get failed!");
+                            KVMessage resp = store.get(token[1]);
+                            printKVMessage(resp);
+                        } catch (IOException e) {
+                            printError("GET request failed!");
+                            logger.warn("GET request failed!", e);
                         }
                     }
                 } else {
@@ -95,16 +95,18 @@ public class KVClient implements IKVClient, Runnable {
                 break;
             
             case "put":
-                System.out.println("put");
                 if (token.length == 2 || token.length == 3) {
                     if (store != null && store.isRunning()){
                         try {
                             // delete
-                            if (token.length == 2) store.put(token[1], "");
+                            KVMessage resp; 
+                            if (token.length == 2) resp = store.put(token[1], "");
                             // put or update
-                            else store.put(token[1], token[2]);
-                        } catch (Exception e) {
-                            printError("put failed!");
+                            else resp = store.put(token[1], token[2]);
+                            printKVMessage(resp);
+                        } catch (IOException e) {
+                            printError("PUT request failed!");
+                            logger.warn("PUT request failed!", e);
                         }
                     }
                 } else {
@@ -145,12 +147,11 @@ public class KVClient implements IKVClient, Runnable {
 
     @Override
     public void newConnection(String hostname, int port) throws Exception {
-        try {
-            store = new KVStore(hostname, port);
-            store.connect();
-        } catch(Exception e) {
-            logger.warn("connection cannot be established!", e);
+        if (store != null) {
+            throw new Exception("connection has already been established!");
         }
+        store = new KVStore(hostname, port);
+        store.connect();
     }
 
     private void closeConnection() {
@@ -227,6 +228,20 @@ public class KVClient implements IKVClient, Runnable {
 
     private void printError(String error){
 		System.out.println(PROMPT + "Error! " +  error);
+    }
+
+    private void printStatus(String status){
+        System.out.println(PROMPT + status);
+    }
+
+    private void printKVMessage(KVMessage msg) {
+        if (msg.getValue().equals("")) {
+            System.out.println(PROMPT + msg.getStatus() + " <" + 
+            msg.getKey() + ">"); 
+        } else {
+            System.out.println(PROMPT + msg.getStatus() + " <" + 
+            msg.getKey() + ", " + msg.getValue() + ">");
+        }
     }
 
     public String getServerAddr() {

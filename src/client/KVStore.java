@@ -62,13 +62,13 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		}
 	}
 
-	
+	//TODO: Find out why receiveMessage is empty string
 	@Override
 	public KVMessage put(String key, String value) throws IOException {
 		logger.info("PUT request to server. Key: " + key + " , Value: " + value);
-		System.out.println("GET request to server. Key: " + key);
+		System.out.println("PUT request to server. Key: " + key + " , Value: " + value);
 
-		JsonMessage jsonReq = new JsonMessage("PUT", key, value);
+		JsonMessage jsonReq = new JsonMessage(KVMessage.StatusType.PUT, key, value);
 		TextMessage req = new TextMessage(jsonReq.serialize());
 		sendMessage(req);
 		TextMessage resp = receiveMessage();
@@ -81,8 +81,9 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	@Override
 	public KVMessage get(String key) throws IOException {
 		logger.info("GET request to server. Key: " + key);
-		
-		JsonMessage jsonReq = new JsonMessage("GET", key, "");
+		System.out.println("GET request to server. Key: " + key);
+
+		JsonMessage jsonReq = new JsonMessage(KVMessage.StatusType.GET, key, "");
 		TextMessage req = new TextMessage(jsonReq.serialize());
 		sendMessage(req);
 		TextMessage resp = receiveMessage();
