@@ -6,6 +6,8 @@ import java.io.UnsupportedEncodingException;
 public interface IKVStorage {
     String storagePath = ".//storage//";
 
-    public void writeToDisk (String key, String value) throws FileNotFoundException, UnsupportedEncodingException;
+    void writeToDisk (String key, String value) throws FileNotFoundException, UnsupportedEncodingException;
+
+    String getFileContents(String key) throws FileNotFoundException;
 
 }

@@ -1,9 +1,6 @@
 package server;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 
 public class KVStorage implements IKVStorage {
 
@@ -20,11 +17,18 @@ public class KVStorage implements IKVStorage {
         writer.close();
     }
 
-    public String findFile(String key){
-        File kv = new File(storagePath + key + ".txt");
-        String value = kv.toString();
+    public String getFileContents(String key) throws FileNotFoundException {
+        File file = new File(storagePath + key + ".txt");
+        BufferedReader br = new BufferedReader(new FileReader(file));
+        String st;
+        String value = "";
+        try {
+            while ((st = br.readLine()) != null)
+                value = value + st;
+        } catch (IOException e) {
+            //Do nothing here for now
+        }
         return value;
     }
-
 
 }
