@@ -31,4 +31,9 @@ public class KVStorage implements IKVStorage {
         return value;
     }
 
+    public boolean deleteFile(String key){
+        File file = new File(storagePath + key + txtExtension);
+        return file.delete();
+    }
+
 }

@@ -32,6 +32,7 @@ public class AdditionalTest extends TestCase {
         } catch (UnsupportedEncodingException uee) {
             assertTrue(false);
         }
+        store.deleteFile("testWrite");
     }
 
     @Test
@@ -51,6 +52,7 @@ public class AdditionalTest extends TestCase {
         } catch (FileNotFoundException e) {
             assertTrue(false);
         }
+        store.deleteFile("read_file_test");
         assertEquals("Testing weather KVStore can read the file", funcOut);
 
     }
