@@ -70,4 +70,40 @@ public class AdditionalTest extends TestCase {
         assertNotNull(ex);
     }
 
+
+    @Test
+    public void testFileOverwrite() {
+        KVStorage store = new KVStorage();
+        try {
+            store.writeToDisk("overwrittenFile", "File_contents 1");
+        } catch (FileNotFoundException fnfe) {
+            assertTrue(false);
+        } catch (UnsupportedEncodingException uee) {
+            assertTrue(false);
+        }
+
+        String funcOut = "";
+        try {
+            funcOut = store.getFileContents("overwrittenFile");
+        } catch (FileNotFoundException e) {
+            assertTrue(false);
+        }
+        assertEquals("File_contents 1", funcOut);
+
+        try {
+            store.writeToDisk("overwrittenFile", "File_contents 2");
+        } catch (FileNotFoundException fnfe) {
+            assertTrue(false);
+        } catch (UnsupportedEncodingException uee) {
+            assertTrue(false);
+        }
+
+        try {
+            funcOut = store.getFileContents("overwrittenFile");
+        } catch (FileNotFoundException e) {
+            assertTrue(false);
+        }
+        assertEquals("File_contents 2", funcOut);
+    }
+
 }
