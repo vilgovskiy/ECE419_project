@@ -12,4 +12,6 @@ public interface IKVStorage {
     String getFileContents(String key) throws FileNotFoundException;
 
     boolean deleteFile(String key);
+
+    boolean checkIfFileExists(String key);
 }

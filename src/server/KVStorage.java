@@ -36,7 +36,7 @@ public class KVStorage implements IKVStorage {
         return file.delete();
     }
 
-    public boolean checkIfFileEists(String key){
+    public boolean checkIfFileExists(String key){
         File file = new File(storagePath + key + txtExtension);
         return file.exists();
     }
