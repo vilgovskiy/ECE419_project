@@ -1,5 +1,7 @@
 package app_kvServer;
 
+import shared.messages.JsonMessage;
+
 public interface IKVServer {
     public enum CacheStrategy {
         None,
@@ -52,7 +54,7 @@ public interface IKVServer {
      * @throws Exception
      *      when key not in the key range of the server
      */
-    public String getKV(String key) throws Exception;
+    public JsonMessage getKV(String key) throws Exception;
 
     /**
      * Put the key-value pair into storage

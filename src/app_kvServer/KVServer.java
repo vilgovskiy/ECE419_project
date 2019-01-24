@@ -1,12 +1,16 @@
 package app_kvServer;
 
 
-import logging.LogSetup;
+import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import server.IKVStorage;
 import server.KVClientConnection;
 import server.KVStorage;
+import shared.messages.JsonMessage;
+import shared.messages.KVMessage;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
@@ -21,6 +25,7 @@ public class KVServer implements IKVServer {
     private CacheStrategy strategy;
     private boolean running;
     private ServerSocket serverSocket;
+    private IKVStorage storage;
 
     /**
      * Start KV Server at given port
@@ -38,6 +43,8 @@ public class KVServer implements IKVServer {
         this.port = port;
         this.cacheSize = cacheSize;
         this.strategy = CacheStrategy.valueOf(strategy);
+        storage = new KVStorage();
+
         logger.info("Creating an instance of the KV server");
     }
 
@@ -77,9 +84,19 @@ public class KVServer implements IKVServer {
     }
 
     @Override
-    public String getKV(String key) throws Exception {
-        // TODO Auto-generated method stub
-        return "";
+    public JsonMessage getKV(String key)  {
+        JsonMessage responseMsg = new JsonMessage();
+        responseMsg.setKey(key);
+        try {
+            String value = storage.getFileContents(key);
+            responseMsg.setValue(value);
+            responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
+            logger.info("Succesfully retrieved value for key:" + key);
+        } catch (FileNotFoundException e) {
+            responseMsg.setStatus(KVMessage.StatusType.GET_ERROR);
+            logger.info("Could not retrieve value for key:" + key + ". File doesnt exist");
+        }
+        return responseMsg;
     }
 
     @Override
