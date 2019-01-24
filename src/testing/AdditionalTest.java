@@ -4,106 +4,63 @@ import org.junit.Test;
 
 import junit.framework.TestCase;
 import server.KVStorage;
+import server.KVData;
 
-import java.io.FileNotFoundException;
-import java.io.UnsupportedEncodingException;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
+import logger.LogSetup;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.ArrayList;
 
 public class AdditionalTest extends TestCase {
-
-    // TODO add your test cases, at least 3
-
-    @Test
-    public void testStub() {
-        assertTrue(true);
-    }
+    private Logger logger = Logger.getRootLogger();
 
     @Test
-    public void testFileRead() {
+    public void testKVStorage() {
+        try {
+            new LogSetup("logs/test.log", Level.OFF);
+        } catch(IOException e) {}
 
+        KVStorage storage = new KVStorage("one");
+        File storageFile = new File("/Users/brucechenchen/github/ECE419_project/data/one.db");
+        assert(storageFile.exists());
+
+        List<KVData> dataList = new ArrayList<>();
+        List<Long> indexList = new ArrayList<>();
+        dataList.add(new KVData("key1", "value1"));
+        dataList.add(new KVData("key2", "value2"));
+        dataList.add(new KVData("object", "storageValue"));
+        dataList.add(new KVData("hello", "world"));
+
+        for (KVData data : dataList) {
+            try {
+                indexList.add(storage.write(data));
+            } catch (IOException e) {
+                System.out.println("IO Exception during write!");
+            }
+        }
+
+        for (KVData data : dataList) {
+            try {
+                KVData foundEntry = storage.read(data.getKey());
+                assert(foundEntry.getKey().equals(data.getKey()));
+                assert(foundEntry.getValue().equals(data.getValue()));
+            } catch(IOException e) {
+                System.out.println("IO Exception during read!");
+            }
+        }
+
+        int i = 0;
+        for (long index : indexList) {
+            try {
+                KVData foundEntry = storage.readFromIndex(dataList.get(i).getKey(), index);
+                assert(foundEntry.getKey().equals(dataList.get(i).getKey()));
+                assert(foundEntry.getValue().equals(dataList.get(i).getValue()));
+            } catch (Exception e) {
+                System.out.println("Exception during read from index!");
+            }
+        }
     }
-
-    @Test
-    public void testFileCreate() {
-        KVStorage store = new KVStorage();
-        try {
-            store.writeToDisk("testWrite", "Attempt to write a text file to store directory.");
-        } catch (FileNotFoundException fnfe) {
-            assertTrue(false);
-        } catch (UnsupportedEncodingException uee) {
-            assertTrue(false);
-        }
-        store.deleteFile("testWrite");
-    }
-
-    @Test
-    public void testGetFileContents() {
-        KVStorage store = new KVStorage();
-        try {
-            store.writeToDisk("read_file_test", "Testing weather KVStore can read the file");
-        } catch (FileNotFoundException fnfe) {
-            assertTrue(false);
-        } catch (UnsupportedEncodingException uee) {
-            assertTrue(false);
-        }
-
-        String funcOut = "";
-        try {
-            funcOut = store.getFileContents("read_file_test");
-        } catch (FileNotFoundException e) {
-            assertTrue(false);
-        }
-        store.deleteFile("read_file_test");
-        assertEquals("Testing weather KVStore can read the file", funcOut);
-
-    }
-
-    @Test
-    public void testGetFileContentsNonExistingFile() {
-        KVStorage store = new KVStorage();
-
-        FileNotFoundException ex = null;
-        try {
-            store.getFileContents("someFile");
-        } catch (FileNotFoundException e) {
-            ex = e;
-        }
-        assertNotNull(ex);
-    }
-
-
-    @Test
-    public void testFileOverwrite() {
-        KVStorage store = new KVStorage();
-        try {
-            store.writeToDisk("overwrittenFile", "File_contents 1");
-        } catch (FileNotFoundException fnfe) {
-            assertTrue(false);
-        } catch (UnsupportedEncodingException uee) {
-            assertTrue(false);
-        }
-
-        String funcOut = "";
-        try {
-            funcOut = store.getFileContents("overwrittenFile");
-        } catch (FileNotFoundException e) {
-            assertTrue(false);
-        }
-        assertEquals("File_contents 1", funcOut);
-
-        try {
-            store.writeToDisk("overwrittenFile", "File_contents 2");
-        } catch (FileNotFoundException fnfe) {
-            assertTrue(false);
-        } catch (UnsupportedEncodingException uee) {
-            assertTrue(false);
-        }
-
-        try {
-            funcOut = store.getFileContents("overwrittenFile");
-        } catch (FileNotFoundException e) {
-            assertTrue(false);
-        }
-        assertEquals("File_contents 2", funcOut);
-    }
-
 }

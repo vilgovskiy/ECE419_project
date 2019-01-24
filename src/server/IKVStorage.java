@@ -4,12 +4,15 @@ import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
 
 public interface IKVStorage {
-    String storagePath = ".//storage//";
-    String txtExtension = ".txt";
 
-    void writeToDisk (String key, String value) throws FileNotFoundException, UnsupportedEncodingException;
+    void put(String key, String value) throws Exception;
 
-    String getFileContents(String key) throws FileNotFoundException;
+    String get(String key) throws Exception;
 
-    boolean deleteFile(String key);
+    long write(KVData kvData) throws Exception;
+
+    KVData read(String key) throws Exception;
+
+    KVData readFromIndex(String key, long index) throws Exception;
+
 }
