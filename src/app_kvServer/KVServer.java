@@ -6,7 +6,6 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import server.KVClientConnection;
 import server.KVStorage;
-import server.Server;
 
 import java.io.IOException;
 import java.net.BindException;
