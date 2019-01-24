@@ -1,9 +1,12 @@
 package app_kvServer;
 
 
+import logging.LogSetup;
+import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import server.KVClientConnection;
 import server.KVStorage;
+import server.Server;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -82,7 +85,7 @@ public class KVServer implements IKVServer {
 
     @Override
     public void putKV(String key, String value) throws Exception {
-        if (value.isEmpty()){
+        if (value.isEmpty()) {
             logger.info("Delet KV with key: " + key);
 
         }// else if (inStorage(key))
@@ -154,5 +157,68 @@ public class KVServer implements IKVServer {
 
     private boolean isRunning() {
         return this.running;
+    }
+
+    /**
+     * Helper function that checks all argument types and if they are vcalid
+     *
+     * @param port integer signifies port server is listening on
+     * @param cache_size integer size of server cache
+     * @param cache_strategy one of three implemented caching strategies [FIFO, LIFO, LFU]
+     * @return true or false based of weather args passed validation
+     */
+    private static boolean argsAreOkay(String port, String cache_size, String cache_strategy){
+        boolean ret;
+        if (port.matches("\\d+")) {
+            if (cache_size.matches("\\d+")) {
+                ret = true;
+            } else {
+                ret = false;
+                System.out.println("Error! Invalid argument <cachesize>! Not a number!");
+            }
+        } else {
+            ret = false;
+            System.out.println("Error! Invalid argument <port>! Not a number!");
+        }
+
+        if (!(cache_strategy.matches("LFU") ||
+                cache_strategy.matches("FIFO") ||
+                cache_strategy.matches("LIFO"))) {
+            ret = false;
+            System.out.println("Error! Invalid argument <cache_strategy>! Has to be either \"FIFO\" or \"LIFO\" or \"LFU\"!");
+        }
+
+        return ret;
+    }
+
+
+    /**
+     * Main entry point for the echo server application.
+     *
+     * @param args contains the port number at args[0], cache size at args[1] and caching strategy at args[2].
+     */
+    public static void main(String[] args) {
+        try {
+            new LogSetup("logs/server.log", Level.ALL);
+            if (args.length != 3) {
+                System.out.println("Error! Invalid number of arguments!");
+                System.out.println("Usage: KVServer <port> <cahche size> <caching strategy>!");
+            } else if (argsAreOkay(args[0], args[1], args[2])) {
+
+                int port = Integer.parseInt(args[0]);
+                int cacheSize = Integer.parseInt(args[1]);
+                String strategy = args[2];
+
+                new KVServer(port, cacheSize, strategy);
+            }
+        } catch (IOException e) {
+            System.out.println("Error! Unable to initialize logger!");
+            e.printStackTrace();
+            System.exit(1);
+        } catch (NumberFormatException nfe) {
+            System.out.println("Error! Invalid argument <port> or <cache_size>! Not a number!");
+            System.out.println("Usage: Server <port>!");
+            System.exit(1);
+        }
     }
 }
