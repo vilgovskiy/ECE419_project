@@ -34,6 +34,7 @@ public class AdditionalTest extends TestCase {
         dataList.add(new KVData("object", "storageValue"));
         dataList.add(new KVData("hello", "world"));
 
+
         for (KVData data : dataList) {
             try {
                 indexList.add(storage.write(data));

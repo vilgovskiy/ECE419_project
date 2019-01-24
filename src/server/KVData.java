@@ -46,7 +46,7 @@ public class KVData {
     // convert KVData into byte array
     public byte[] toByteArray() {
         byte[] keySizeBytes = ByteBuffer.allocate(4).putInt(keySize).array();
-        byte[] valueSizeBytes = ByteBuffer.allocate(4).putInt(keySize).array();
+        byte[] valueSizeBytes = ByteBuffer.allocate(4).putInt(valueSize).array();
         byte[] keyBytes = key.getBytes(Charset.forName("UTF-8"));
         byte[] valueBytes = value.getBytes(Charset.forName("UTF-8"));
 

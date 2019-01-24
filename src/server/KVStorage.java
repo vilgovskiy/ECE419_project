@@ -65,7 +65,6 @@ public class KVStorage implements IKVStorage {
         long fileLength = raf.length();
         raf.seek(fileLength);
         raf.write(data.toByteArray());
-        fileLength = raf.length();
         raf.close();
         return fileLength;
     }
@@ -96,13 +95,13 @@ public class KVStorage implements IKVStorage {
 
             if (keyString.equals(key)) {
                 byte[] valueBytes = new byte[valueSize];
+                raf.read(valueBytes);
                 String value = new String(valueBytes, Charset.forName("UTF-8"));
                 foundEntry.setKey(key);
                 foundEntry.setValue(value);
                 found = true;
-                break;
             } else {
-                currOffset += keySize + valueSize;
+                currOffset += valueSize;
             }
         }
         raf.close();
@@ -112,26 +111,25 @@ public class KVStorage implements IKVStorage {
     @Override
     public KVData readFromIndex(String key, long index) throws Exception {
         KVData foundEntry = new KVData();
-        long currOffset = index;
+        long offset = index;
         byte[] keySizeBytes = new byte[4];
         byte[] valueSizeBytes = new byte[4];
 
-        RandomAccessFile raf = new RandomAccessFile(storageDir + storageFilePath, "r");
-        raf.seek(currOffset);
+        RandomAccessFile raf = new RandomAccessFile(storageFilePath, "r");
+        raf.seek(offset);
         raf.read(keySizeBytes);
-        currOffset += 4;
         raf.read(valueSizeBytes);
-        currOffset +=4;
 
         int keySize = ByteBuffer.wrap(keySizeBytes).getInt();
+        int valueSize = ByteBuffer.wrap(valueSizeBytes).getInt();
+
         byte[] keyBytes = new byte[keySize];
         raf.read(keyBytes);
         String keyString = new String(keyBytes, Charset.forName("UTF-8"));
-        currOffset += keySize;
-        int valueSize = ByteBuffer.wrap(valueSizeBytes).getInt();
 
         if (keyString.equals(key)) {
             byte[] valueBytes = new byte[valueSize];
+            raf.read(valueBytes);
             String value = new String(valueBytes, Charset.forName("UTF-8"));
             foundEntry.setKey(key);
             foundEntry.setValue(value);
