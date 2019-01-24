@@ -1,7 +1,6 @@
 package server;
 
 import app_kvServer.IKVServer;
-import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
 
@@ -9,7 +8,6 @@ import java.io.*;
 import java.net.Socket;
 
 import shared.communication.AbstractCommunication;
-import shared.messages.KVMessage;
 import shared.messages.TextMessage;
 import shared.messages.JsonMessage;
 
@@ -18,8 +16,6 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
 
     private IKVServer kvServer;
     private boolean isOpen;
-    private static final int BUFFER_SIZE = 1024;
-    private static final int DROP_SIZE = 128 * BUFFER_SIZE;
 
     private Socket clientSocket;
 
@@ -46,6 +42,8 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                     JsonMessage msg = new JsonMessage();
                     msg.deserialize(text.getMsg());
                     JsonMessage response = processMsg(msg);
+                    TextMessage respText =new TextMessage(response.serialize());
+                    sendMessage(respText);
 
 
                     /* connection either terminated by the client or lost due to
@@ -74,24 +72,18 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
     }
 
     private JsonMessage processMsg(JsonMessage msg) {
-        JsonMessage response = new JsonMessage();
+        JsonMessage response = null;
         logger.info("Received message from " + clientSocket.getInetAddress());
+
         switch (msg.getStatus()) {
             case PUT:
-                try {
-                    logger.info("Put request for key:" + msg.getKey() + " value:" + msg.getValue());
-                    kvServer.putKV(msg.getKey(), msg.getValue());
-                } catch (Exception e){
-                    //TODO Add proper handling for this exception
-                }
+                logger.info("Put request for key:" + msg.getKey() + " value:" + msg.getValue());
+                response = kvServer.putKV(msg.getKey(), msg.getValue());
                 break;
+
             case GET:
-                try {
-                    logger.info("Put request for key:" + msg.getKey() + " value:" + msg.getValue());
-                    kvServer.getKV(msg.getKey());
-                } catch (Exception e){
-                    //TODO Add proper handling for this exception
-                }
+                logger.info("Put request for key:" + msg.getKey() + " value:" + msg.getValue());
+                response = kvServer.getKV(msg.getKey());
                 break;
             default:
         }

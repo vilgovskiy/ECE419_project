@@ -110,8 +110,6 @@ public class AdditionalTest extends TestCase {
         assertEquals("File_contents 2", funcOut);
     }
 
-}
-
 	@Test
 	public void testJsonMessage() {
 		JsonMessage msg = new JsonMessage(KVMessage.StatusType.PUT, "sampleKey", "sampleValue");
@@ -124,4 +122,11 @@ public class AdditionalTest extends TestCase {
 		assert(deserializedMsg.getKey().equals("sampleValue"));
 		assert(deserializedMsg.getStatus() == (KVMessage.StatusType.PUT));
 	}
+
+	@Test
+    public void testFileExistsOnNonExistingFile(){
+        KVStorage store = new KVStorage();
+        boolean res = store.checkIfFileExists("ThisFileShouldntExist");
+        assertFalse(res);
+    }
 }

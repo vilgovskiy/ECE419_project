@@ -12,6 +12,7 @@ import shared.messages.KVMessage;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -99,11 +100,42 @@ public class KVServer implements IKVServer {
     }
 
     @Override
-    public void putKV(String key, String value) throws Exception {
+    public JsonMessage putKV(String key, String value) {
+        boolean fileAlreadyExists = inStorage(key);
+        JsonMessage response = new JsonMessage();
+        response.setKey(key);
+        response.setValue(value);
+
+
         if (value.isEmpty()) {
             logger.info("Delete KV with key: " + key);
+            if (fileAlreadyExists) {
+                storage.deleteFile(key);
+                logger.info("Successfully deleted KV with key:" + key);
+                response.setStatus(KVMessage.StatusType.DELETE_SUCCESS);
+            } else {
+                response.setStatus(KVMessage.StatusType.DELETE_ERROR);
+                logger.info("Unable to delete key:" + key + ". File doesn't exist!");
+            }
+        } else {
+            response.setStatus(KVMessage.StatusType.PUT_ERROR);
+            try {
+                storage.writeToDisk(key, value);
+                if (fileAlreadyExists){
+                    response.setStatus(KVMessage.StatusType.PUT_UPDATE);
+                    logger.info("Successfully updated key:" + key + " with value:" + value);
+                } else {
+                    response.setStatus(KVMessage.StatusType.PUT_SUCCESS);
+                    logger.info("Successfully inserted key:" + key + " with value:" + value);
+                }
 
-        }// else if (inStorage(key))
+            } catch (FileNotFoundException e) {
+                logger.error("Somehow file could not be found");
+            } catch (UnsupportedEncodingException e) {
+                logger.error("Unsupported encoding");
+            }
+        }
+        return response;
     }
 
     @Override

@@ -54,14 +54,14 @@ public interface IKVServer {
      * @throws Exception
      *      when key not in the key range of the server
      */
-    public JsonMessage getKV(String key) throws Exception;
+    public JsonMessage getKV(String key);
 
     /**
      * Put the key-value pair into storage
      * @throws Exception
      *      when key not in the key range of the server
      */
-    public void putKV(String key, String value) throws Exception;
+    public JsonMessage putKV(String key, String value);
 
     /**
      * Clear the local cache of the server
