@@ -18,7 +18,7 @@ import shared.messages.KVMessage;
 public class KVClient implements IKVClient, Runnable {
 
     private static Logger logger = Logger.getRootLogger();
-    private static final String PROMPT = "Client> ";
+    private static final String PROMPT = "> ";
 
     private BufferedReader stdin;
     private KVStore store = null;
@@ -58,15 +58,19 @@ public class KVClient implements IKVClient, Runnable {
                     } catch(NumberFormatException nfe) {
                         printError("No valid address. Port must be a number!");
                         logger.info("Unable to parse argument <port>", nfe);
+                        closeConnection();
                     } catch (UnknownHostException e) {
                         printError("Unknown Host!");
                         logger.info("Unknown Host!", e);
+                        closeConnection();
                     } catch (IOException ioe) {
                         printError("Could not establish connection!");
                         logger.warn("Could not establish connection!", ioe);
+                        closeConnection();
                     } catch(Exception e) {
                         printError("Connection is already established!");
                         logger.warn("Connection is already established!", e);
+                        closeConnection();
                     }
                 } else {
                     printError("Invalid number of parameters!");
@@ -84,7 +88,7 @@ public class KVClient implements IKVClient, Runnable {
                         try {
                             KVMessage resp = store.get(token[1]);
                             printKVMessage(resp);
-                        } catch (IOException e) {
+                        } catch (Exception e) {
                             printError("GET request failed!");
                             logger.warn("GET request failed!", e);
                         }
@@ -104,7 +108,7 @@ public class KVClient implements IKVClient, Runnable {
                             // put or update
                             else resp = store.put(token[1], token[2]);
                             printKVMessage(resp);
-                        } catch (IOException e) {
+                        } catch (Exception e) {
                             printError("PUT request failed!");
                             logger.warn("PUT request failed!", e);
                         }
@@ -231,15 +235,15 @@ public class KVClient implements IKVClient, Runnable {
     }
 
     private void printStatus(String status){
-        System.out.println(PROMPT + status);
+        System.out.println(status);
     }
 
     private void printKVMessage(KVMessage msg) {
         if (msg.getValue().equals("")) {
-            System.out.println(PROMPT + msg.getStatus() + " <" + 
+            System.out.println(msg.getStatus() + " <" +
             msg.getKey() + ">"); 
         } else {
-            System.out.println(PROMPT + msg.getStatus() + " <" + 
+            System.out.println(msg.getStatus() + " <" +
             msg.getKey() + ", " + msg.getValue() + ">");
         }
     }

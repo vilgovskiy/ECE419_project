@@ -19,6 +19,9 @@ public class AdditionalTest extends TestCase {
 		System.out.println(strMsg);
 		JsonMessage deserializedMsg = new JsonMessage();
 		deserializedMsg.deserialize(strMsg);
-		System.out.println(deserializedMsg.toString());
+
+		assert(deserializedMsg.getKey().equals("sampleKey"));
+		assert(deserializedMsg.getKey().equals("sampleValue"));
+		assert(deserializedMsg.getStatus() == (KVMessage.StatusType.PUT));
 	}
 }
