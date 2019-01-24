@@ -1,17 +1,34 @@
-package cache.structures;
+package app_kvServer.cache.util;
 
 import java.lang.Exception;
-import cache.structures.Node;
 
 public class DLL {
-	Node head;
-	Node tail;
-	int size;
+	private Node head;
+	private Node tail;
+	private int size;
 
 	public DLL() {
 		size = 0;
 		head = null;
 		tail = null;
+	}
+
+	/**
+	 * Inserts into the front of the DLL
+	 * @param newNode node to insert into the DLL
+	 */
+	public void insertFront(Node newNode) {
+		if(size == 0) {
+			head = newNode;
+			tail = newNode;
+		} else {
+			head.prev = newNode;
+			newNode.prev = null;
+			newNode.next = head;
+			head = newNode;
+		}
+
+		size++;
 	}
 
 	/**
@@ -27,6 +44,25 @@ public class DLL {
 			newNode.prev = tail;
 			newNode.next = null;
 			tail = newNode;
+		}
+
+		size++;
+	}
+
+	/**
+	 * Inserts newNode to the right of node
+	 * @param node inserts to the right of this node
+	 * @param newNode node to insert into the DLL
+	 */
+	public void insertRight(Node node, Node newNode) {
+		if(node == tail) {
+			this.insertRear(newNode);
+		} else {
+			newNode.prev = node;
+			newNode.next = node.next;
+
+			node.next.prev = newNode;
+			node.next = newNode;
 		}
 
 		size++;
@@ -81,6 +117,14 @@ public class DLL {
 	 */
 	public int getSize() {
 		return size;
+	}
+
+	/**
+	 * Gets the head node of the DLL
+	 * @return Node
+	 */
+	public Node getHead() {
+		return head;
 	}
 
 }

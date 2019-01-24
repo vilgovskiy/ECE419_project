@@ -1,4 +1,4 @@
-package cache.structures;
+package app_kvServer.cache.util;
 
 public class Node {
 	public String key;

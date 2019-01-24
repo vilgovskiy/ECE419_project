@@ -1,30 +1,31 @@
-package cache;
+package app_kvServer.cache;
 
 import java.util.HashMap;
-import cache.structures.DLL;
-import cache.structures.Node;
+import app_kvServer.cache.util.DLL;
+import app_kvServer.cache.util.Node;
 
 public class LRUCache extends Cache {
-	HashMap<String, Node> hmap;
-	DLL q;
+	private DLL queue;
+	private HashMap<String, Node> hmap;
 
 	public LRUCache(int maxSize) {
 		super(maxSize);
+		queue = new DLL();
 		hmap = new HashMap<String, Node>();
-		q = new DLL();
 	}
 
-	private void moveNodeToRear(String key) {
+	private void reorder(String key) {
+		// Move KV pair to rear when used
 		Node n = hmap.get(key);
-		q.delete(n);
-		q.insertRear(n);
+		queue.delete(n);
+		queue.insertRear(n);
 	}
 
 	@Override
 	public synchronized String getKV(String key) throws Exception {
 		if(inCache(key)) {
-			// Move KV pair to back of queue
-			moveNodeToRear(key);
+			// Move KV pair to the back of the queue
+			reorder(key);
 			return hmap.get(key).value;
 		} else {
 			throw new Exception("Key not in cache");
@@ -36,12 +37,14 @@ public class LRUCache extends Cache {
 		if(inCache(key)) {
 			if(value == null) {
 				// delete KV pair
-				q.delete(hmap.get(key));
+				queue.delete(hmap.get(key));
 				hmap.remove(key);
 				size--;
 			} else {
+				// Move KV pair to the back of the queue
+				reorder(key);
+
 				// update value in KV pair
-				moveNodeToRear(key);
 				hmap.get(key).value = value;
 			}
 		} else {
@@ -49,8 +52,8 @@ public class LRUCache extends Cache {
 				throw new Exception("Unable to delete, key not in cache");
 			} else {
 				if(size == maxSize) {
-					// evict KV pair that is in front of the queue
-					Node evicted = q.deleteFront();
+					// evict KV pair
+					Node evicted = queue.deleteFront();
 					hmap.remove(evicted.key);
 					size--;
 				}
@@ -58,7 +61,7 @@ public class LRUCache extends Cache {
 				// insert KV pair
 				Node newNode = new Node(key, value);
 				hmap.put(key, newNode);
-				q.insertRear(newNode);
+				queue.insertRear(newNode);
 				size++;
 			}
 		}
@@ -72,7 +75,7 @@ public class LRUCache extends Cache {
 	@Override
 	public synchronized void clearCache() {
 		hmap = new HashMap<String, Node>();
-		q = new DLL();
+		queue = new DLL();
 		size = 0;
 	}
 }
