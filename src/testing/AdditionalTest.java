@@ -8,6 +8,10 @@ import server.KVStorage;
 import java.io.FileNotFoundException;
 import java.io.UnsupportedEncodingException;
 
+import client.KVStore;
+import shared.messages.JsonMessage;
+import shared.messages.KVMessage;
+
 public class AdditionalTest extends TestCase {
 
     // TODO add your test cases, at least 3
@@ -106,4 +110,18 @@ public class AdditionalTest extends TestCase {
         assertEquals("File_contents 2", funcOut);
     }
 
+}
+
+	@Test
+	public void testJsonMessage() {
+		JsonMessage msg = new JsonMessage(KVMessage.StatusType.PUT, "sampleKey", "sampleValue");
+		String strMsg = msg.serialize();
+		System.out.println(strMsg);
+		JsonMessage deserializedMsg = new JsonMessage();
+		deserializedMsg.deserialize(strMsg);
+
+		assert(deserializedMsg.getKey().equals("sampleKey"));
+		assert(deserializedMsg.getKey().equals("sampleValue"));
+		assert(deserializedMsg.getStatus() == (KVMessage.StatusType.PUT));
+	}
 }

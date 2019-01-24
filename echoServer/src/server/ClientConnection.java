@@ -45,11 +45,11 @@ public class ClientConnection implements Runnable {
 			output = clientSocket.getOutputStream();
 			input = clientSocket.getInputStream();
 		
-			sendMessage(new TextMessage(
+			/*sendMessage(new TextMessage(
 					"Connection to MSRG Echo server established: " 
 					+ clientSocket.getLocalAddress() + " / "
 					+ clientSocket.getLocalPort()));
-			
+			*/
 			while(isOpen) {
 				try {
 					TextMessage latestMsg = receiveMessage();

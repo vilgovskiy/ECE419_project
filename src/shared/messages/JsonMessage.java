@@ -18,6 +18,7 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
         this.value = value;
     }
 
+
     @Override
     public String getKey() {
         return key;
@@ -63,7 +64,8 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
 
     @Override
     public String toString() {
-        return "JSON MSG - STATUS: " + this.status + " KEY: " + this.key + " VALUE: " + this.value;
+        return "JSON MSG - STATUS: " + this.status 
+                + " KEY: " + this.key + " VALUE: " + this.value;
     }
 
 }
