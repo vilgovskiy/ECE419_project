@@ -73,8 +73,7 @@ public class KVServer implements IKVServer {
 
     @Override
     public boolean inStorage(String key) {
-        // TODO Auto-generated method stub
-        return false;
+        return storage.checkIfFileExists(key);
     }
 
     @Override
@@ -102,7 +101,7 @@ public class KVServer implements IKVServer {
     @Override
     public void putKV(String key, String value) throws Exception {
         if (value.isEmpty()) {
-            logger.info("Delet KV with key: " + key);
+            logger.info("Delete KV with key: " + key);
 
         }// else if (inStorage(key))
     }
