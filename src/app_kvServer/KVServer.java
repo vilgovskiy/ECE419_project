@@ -17,7 +17,7 @@ import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.Socket;
 
-public class KVServer implements IKVServer {
+public class KVServer extends Thread implements IKVServer {
 
     private static Logger logger = Logger.getRootLogger();
 
@@ -256,7 +256,7 @@ public class KVServer implements IKVServer {
                 int cacheSize = Integer.parseInt(args[1]);
                 String strategy = args[2];
 
-                new KVServer(port, cacheSize, strategy);
+                new KVServer(port, cacheSize, strategy).start();
             }
         } catch (IOException e) {
             System.out.println("Error! Unable to initialize logger!");

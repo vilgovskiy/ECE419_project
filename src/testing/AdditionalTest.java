@@ -119,7 +119,7 @@ public class AdditionalTest extends TestCase {
 		deserializedMsg.deserialize(strMsg);
 
 		assert(deserializedMsg.getKey().equals("sampleKey"));
-		assert(deserializedMsg.getKey().equals("sampleValue"));
+		assert(deserializedMsg.getValue().equals("sampleValue"));
 		assert(deserializedMsg.getStatus() == (KVMessage.StatusType.PUT));
 	}
 
@@ -129,4 +129,6 @@ public class AdditionalTest extends TestCase {
         boolean res = store.checkIfFileExists("ThisFileShouldntExist");
         assertFalse(res);
     }
+
+
 }
