@@ -18,7 +18,7 @@ public class LFUCache extends Cache {
 		LFUFreqNode fn = n.freqNode;
 		LFUFreqNode nextFn = (LFUFreqNode) fn.next;
 
-		if(fn.freq + 1 == nextFn.freq) {
+		if(nextFn != null && fn.freq + 1 == nextFn.freq) {
 			fn.queue.delete(n);
 			nextFn.queue.insertRear(n);
 
@@ -30,6 +30,7 @@ public class LFUCache extends Cache {
 				fn.freq = fn.freq + 1;
 			} else {
 				LFUFreqNode newFNode = new LFUFreqNode(fn.freq + 1);
+				n.freqNode = newFNode;
 				fn.queue.delete(n);
 				newFNode.queue.insertRear(n);
 				frequencies.insertRight(fn, newFNode);
@@ -100,7 +101,7 @@ public class LFUCache extends Cache {
 
 				LFUFreqNode front = (LFUFreqNode) frequencies.getHead();
 
-				if(front.freq == 1) {
+				if(front != null && front.freq == 1) {
 					front.queue.insertRear(newNode);
 					newNode.freqNode = front;
 				} else {

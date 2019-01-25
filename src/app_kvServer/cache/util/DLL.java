@@ -63,9 +63,9 @@ public class DLL {
 
 			node.next.prev = newNode;
 			node.next = newNode;
-		}
 
-		size++;
+			size++;
+		}
 	}
 
 	/**
@@ -125,6 +125,14 @@ public class DLL {
 	 */
 	public Node getHead() {
 		return head;
+	}
+
+	/**
+	 * Gets the tail node of the DLL
+	 * @return Node
+	 */
+	public Node getTail() {
+		return tail;
 	}
 
 }
