@@ -3,8 +3,8 @@ package testing;
 import org.junit.Test;
 
 import junit.framework.TestCase;
-import server.KVStorage;
-import server.KVData;
+import server.storage.KVStorage;
+import server.storage.KVData;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
