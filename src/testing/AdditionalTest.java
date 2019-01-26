@@ -15,7 +15,6 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class AdditionalTest extends TestCase {
-    private Logger logger = Logger.getRootLogger();
 
     @Test
     public void testKVStorage() {
@@ -60,7 +59,7 @@ public class AdditionalTest extends TestCase {
                 KVData foundEntry = storage.readFromIndex(dataList.get(i).getKey(), index);
                 assert(foundEntry.getKey().equals(dataList.get(i).getKey()));
                 assert(foundEntry.getValue().equals(dataList.get(i).getValue()));
-                i ++;
+                i++;
             } catch (Exception e) {
                 System.out.println("Exception during read from index!");
             }
