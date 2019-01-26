@@ -3,7 +3,7 @@ package testing;
 import org.junit.Test;
 
 import junit.framework.TestCase;
-import app_kvServer.cache.LFUCache;
+import server.cache.LFUCache;
 
 public class LFUCacheTest extends CacheTest {
 

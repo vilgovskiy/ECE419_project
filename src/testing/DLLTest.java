@@ -3,7 +3,7 @@ package testing;
 import org.junit.Test;
 
 import junit.framework.TestCase;
-import app_kvServer.cache.util.*;
+import server.cache.util.*;
 import java.util.ArrayList;
 
 public class DLLTest extends TestCase {

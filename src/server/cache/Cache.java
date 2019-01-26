@@ -1,8 +1,8 @@
-package app_kvServer.cache;
+package server.cache;
 
 import java.util.HashMap;
-import app_kvServer.cache.util.DLL;
-import app_kvServer.cache.util.Node;
+import server.cache.util.DLL;
+import server.cache.util.Node;
 
 public abstract class Cache {
 	protected int size;

@@ -3,7 +3,7 @@ package testing;
 import org.junit.Test;
 
 import junit.framework.TestCase;
-import app_kvServer.cache.Cache;
+import server.cache.Cache;
 
 public class CacheTest extends TestCase {
 

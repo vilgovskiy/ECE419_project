@@ -1,7 +1,7 @@
-package app_kvServer.cache;
+package server.cache;
 
 import java.util.HashMap;
-import app_kvServer.cache.util.*;
+import server.cache.util.*;
 
 public class LFUCache extends Cache {
 	private DLL frequencies;

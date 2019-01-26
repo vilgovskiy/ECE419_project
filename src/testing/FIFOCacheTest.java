@@ -3,7 +3,7 @@ package testing;
 import org.junit.Test;
 
 import junit.framework.TestCase;
-import app_kvServer.cache.FIFOCache;
+import server.cache.FIFOCache;
 
 public class FIFOCacheTest extends CacheTest {
 
