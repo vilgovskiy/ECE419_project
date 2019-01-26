@@ -19,12 +19,13 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testKVStorage() {
+
         try {
             new LogSetup("logs/test.log", Level.OFF);
         } catch(IOException e) {}
 
         KVStorage storage = new KVStorage("one");
-        File storageFile = new File("/Users/brucechenchen/github/ECE419_project/data/one.db");
+        File storageFile = new File("/Users/brucechenchen/github/ECE419_project/one.db");
         assert(storageFile.exists());
 
         List<KVData> dataList = new ArrayList<>();
@@ -59,6 +60,7 @@ public class AdditionalTest extends TestCase {
                 KVData foundEntry = storage.readFromIndex(dataList.get(i).getKey(), index);
                 assert(foundEntry.getKey().equals(dataList.get(i).getKey()));
                 assert(foundEntry.getValue().equals(dataList.get(i).getValue()));
+                i ++;
             } catch (Exception e) {
                 System.out.println("Exception during read from index!");
             }
