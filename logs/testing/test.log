@@ -152,7 +152,7 @@
 2019-01-24 20:07:25,954 INFO  [Thread-4] root: Successfully updated key:deleteTestValue with value:toDelete
 2019-01-24 20:07:25,954 INFO  [Thread-4] root: Send message:	 '{"status":"PUT_UPDATE","key":"deleteTestValue","value":"toDelete"}'
 2019-01-24 20:07:25,955 INFO  [main] root: Receive message:	 '{"status":"PUT_UPDATE","key":"deleteTestValue","value":"toDelete"}'
-2019-01-24 20:07:25,955 INFO  [main] root: PUT request to server. Key: deleteTestValue , Value: 
+2019-01-24 20:07:25,955 INFO  [main] root: PUT request to server. Key: deleteTestValue , Value:
 2019-01-24 20:07:25,956 INFO  [main] root: Send message:	 '{"status":"PUT","key":"deleteTestValue","value":""}'
 2019-01-24 20:07:25,956 INFO  [Thread-4] root: Receive message:	 '{"status":"PUT","key":"deleteTestValue","value":""}'
 2019-01-24 20:07:25,956 INFO  [Thread-4] root: Received message from 127.0.0.1/127.0.0.1
@@ -242,7 +242,7 @@
 2019-01-24 20:07:47,309 INFO  [Thread-3] root: Successfully inserted key:deleteTestValue with value:toDelete
 2019-01-24 20:07:47,310 INFO  [Thread-3] root: Send message:	 '{"status":"PUT_SUCCESS","key":"deleteTestValue","value":"toDelete"}'
 2019-01-24 20:07:47,310 INFO  [main] root: Receive message:	 '{"status":"PUT_SUCCESS","key":"deleteTestValue","value":"toDelete"}'
-2019-01-24 20:07:47,310 INFO  [main] root: PUT request to server. Key: deleteTestValue , Value: 
+2019-01-24 20:07:47,310 INFO  [main] root: PUT request to server. Key: deleteTestValue , Value:
 2019-01-24 20:07:47,310 INFO  [main] root: Send message:	 '{"status":"PUT","key":"deleteTestValue","value":""}'
 2019-01-24 20:07:47,310 INFO  [Thread-3] root: Receive message:	 '{"status":"PUT","key":"deleteTestValue","value":""}'
 2019-01-24 20:07:47,311 INFO  [Thread-3] root: Received message from 127.0.0.1/127.0.0.1
