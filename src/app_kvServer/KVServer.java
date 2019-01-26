@@ -4,6 +4,7 @@ package app_kvServer;
 import logger.LogSetup;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import server.cache.*;
 import server.IKVStorage;
 import server.KVClientConnection;
 import server.KVStorage;
@@ -27,6 +28,7 @@ public class KVServer extends Thread implements IKVServer {
     private boolean running;
     private ServerSocket serverSocket;
     private IKVStorage storage;
+	private Cache cache;
 
     /**
      * Start KV Server at given port
@@ -45,6 +47,19 @@ public class KVServer extends Thread implements IKVServer {
         this.cacheSize = cacheSize;
         this.strategy = CacheStrategy.valueOf(strategy);
         storage = new KVStorage();
+
+		switch (this.strategy) {
+			case FIFO:
+				cache = new FIFOCache(cacheSize);
+				break;
+			case LRU:
+				cache = new LRUCache(cacheSize);
+				break;
+			case LFU:
+				cache = new LFUCache(cacheSize);
+				break;
+			default:
+		}
 
         logger.info("Creating an instance of the KV server");
     }
@@ -79,8 +94,7 @@ public class KVServer extends Thread implements IKVServer {
 
     @Override
     public boolean inCache(String key) {
-        // TODO Auto-generated method stub
-        return false;
+        return cache.inCache();
     }
 
     @Override
@@ -140,7 +154,7 @@ public class KVServer extends Thread implements IKVServer {
 
     @Override
     public void clearCache() {
-        // TODO Auto-generated method stub
+        cache.clearCache();
     }
 
     @Override
