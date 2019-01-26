@@ -36,7 +36,6 @@ public class TextMessage implements Serializable {
 		this.msgBytes = toByteArray(msg);
 	}
 
-
 	/**
 	 * Returns the content of this TextMessage as a String.
 	 * 
