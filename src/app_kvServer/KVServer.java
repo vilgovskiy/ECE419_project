@@ -113,11 +113,11 @@ public class KVServer extends Thread implements IKVServer {
 
 				// place the value in the cache
 				cache.putKV(key, value);
-
-	            responseMsg.setValue(value);
-	            responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
-	            logger.info("Succesfully retrieved value for key:" + key);
 			}
+
+            responseMsg.setValue(value);
+            responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
+            logger.info("Succesfully retrieved value for key:" + key);
         } catch (FileNotFoundException e) {
             responseMsg.setStatus(KVMessage.StatusType.GET_ERROR);
             logger.info("Could not retrieve value for key:" + key + ". File doesnt exist");
