@@ -7,13 +7,13 @@ import server.cache.LFUCache;
 
 public class LFUCacheTest extends CacheTest {
 
-	public void setUp() throws Exception {
+	public void setUp() {
 		cache = new LFUCache(3);
 		cache.putKV("key", "val");
 	}
 
 	@Test
-	public void testGetAndEvict() throws Exception {
+	public void testGetAndEvict() {
 		cache.putKV("key_2", "val_2");
 		cache.putKV("key_3", "val_3");
 		cache.getKV("key");
@@ -26,7 +26,7 @@ public class LFUCacheTest extends CacheTest {
 	}
 
 	@Test
-	public void testUpdateAndEvict() throws Exception {
+	public void testUpdateAndEvict() {
 		cache.putKV("key_2", "val_2");
 		cache.putKV("key_3", "val_3");
 		cache.putKV("key", "new_value");
@@ -39,7 +39,7 @@ public class LFUCacheTest extends CacheTest {
 	}
 
 	@Test
-	public void testEvictCase2() throws Exception {
+	public void testEvictCase2() {
 		cache.putKV("key", "");
 		cache.putKV("key", "");
 		cache.putKV("key_2", "");
@@ -54,7 +54,7 @@ public class LFUCacheTest extends CacheTest {
 	}
 
 	@Test
-	public void testEvictCase3() throws Exception {
+	public void testEvictCase3() {
 		cache.putKV("key", "");
 		cache.putKV("key_2", "");
 		cache.putKV("key_2", "");

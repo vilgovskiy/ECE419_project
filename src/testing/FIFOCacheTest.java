@@ -7,13 +7,13 @@ import server.cache.FIFOCache;
 
 public class FIFOCacheTest extends CacheTest {
 
-	public void setUp() throws Exception {
+	public void setUp() {
 		cache = new FIFOCache(3);
 		cache.putKV("key", "val");
 	}
 
 	@Test
-	public void testEviction() throws Exception {
+	public void testEviction() {
 		cache.putKV("key_2", "val_2");
 		cache.putKV("key_3", "val_3");
 		cache.putKV("key_4", "val_4");
@@ -25,7 +25,7 @@ public class FIFOCacheTest extends CacheTest {
 	}
 
 	@Test
-	public void testDeleteAndEvict() throws Exception {
+	public void testDeleteAndEvict() {
 		cache.putKV("key_2", "val_2");
 		cache.putKV("key_3", "val_3");
 		cache.putKV("key", null);

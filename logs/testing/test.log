@@ -359,3 +359,6 @@
 2019-01-26 15:31:19,019 INFO  [main] root: Creating an instance of the KV server
 2019-01-26 15:31:19,021 INFO  [Thread-0] root: Starting the KVSertver
 2019-01-26 15:31:19,049 INFO  [Thread-0] root: Server listening on the port50000
+2019-01-26 18:31:36,405 INFO  [main] root: Creating an instance of the KV server
+2019-01-26 18:31:36,406 INFO  [Thread-0] root: Starting the KVSertver
+2019-01-26 18:31:36,430 INFO  [Thread-0] root: Server listening on the port50000

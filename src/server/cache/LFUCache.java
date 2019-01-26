@@ -40,18 +40,18 @@ public class LFUCache extends Cache {
 	}
 
 	@Override
-	public synchronized String getKV(String key) throws Exception {
+	public synchronized String getKV(String key) throws RuntimeException {
 		if(inCache(key)) {
 			// Move KV pair to the next frequency node
 			reorder(key);
 			return hmap.get(key).value;
 		} else {
-			throw new Exception("Key not in cache");
+			throw new RuntimeException("Attempted to access key not in cache");
 		}
 	}
 
 	@Override
-	public synchronized void putKV(String key, String value) throws Exception {
+	public synchronized void putKV(String key, String value) throws RuntimeException {
 		if(inCache(key)) {
 			if(value == null) {
 				// delete KV pair
@@ -76,7 +76,7 @@ public class LFUCache extends Cache {
 			}
 		} else {
 			if(value == null) {
-				throw new Exception("Unable to delete, key not in cache");
+				throw new RuntimeException("Attempted to delete a key not in cache");
 			} else {
 				if(size == maxSize) {
 					// Find the KV pairs with the min freq

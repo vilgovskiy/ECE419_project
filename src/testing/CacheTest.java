@@ -10,14 +10,14 @@ public class CacheTest extends TestCase {
 	protected Cache cache;
 
 	@Test
-	public void testCacheSizeIncreasesOnInsert() throws Exception {
+	public void testCacheSizeIncreasesOnInsert() {
 		int prevSize = cache.getSize();
 		cache.putKV("test_key", "test_val");
 		assertTrue(cache.getSize() == prevSize + 1);
 	}
 
 	@Test
-	public void testCacheSizeDecreasesOnDelete() throws Exception {
+	public void testCacheSizeDecreasesOnDelete() {
 		int prevSize = cache.getSize();
 		cache.putKV("key", null);
 		assertTrue(cache.getSize() == prevSize - 1);
@@ -41,24 +41,24 @@ public class CacheTest extends TestCase {
 	}
 
 	@Test
-	public void testGetKV() throws Exception {
+	public void testGetKV() {
 		assertTrue(cache.getKV("key") == "val");
 	}
 
 	@Test
-	public void testInsert() throws Exception {
+	public void testInsert() {
 		cache.putKV("new_key", "new_value");
 		assertTrue(cache.getKV("new_key") == "new_value");
 	}
 
 	@Test
-	public void testUpdate() throws Exception {
+	public void testUpdate() {
 		cache.putKV("key", "new_value");
 		assertTrue(cache.getKV("key") == "new_value");
 	}
 
 	@Test
-	public void testDelete() throws Exception {
+	public void testDelete() {
 		cache.putKV("key", null);
 		assertFalse(cache.inCache("key"));
 	}

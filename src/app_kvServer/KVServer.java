@@ -94,22 +94,35 @@ public class KVServer extends Thread implements IKVServer {
 
     @Override
     public boolean inCache(String key) {
-        return cache.inCache();
+        return cache.inCache(key);
     }
 
     @Override
     public JsonMessage getKV(String key)  {
         JsonMessage responseMsg = new JsonMessage();
         responseMsg.setKey(key);
+		String value;
+
         try {
-            String value = storage.getFileContents(key);
-            responseMsg.setValue(value);
-            responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
-            logger.info("Succesfully retrieved value for key:" + key);
+			if (cache.inCache(key)) {
+				// first check the cache
+				value = cache.getKV(key);
+			} else {
+				// retrieve value from storage
+				value = storage.getFileContents(key);
+
+				// place the value in the cache
+				cache.putKV(key, value);
+
+	            responseMsg.setValue(value);
+	            responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
+	            logger.info("Succesfully retrieved value for key:" + key);
+			}
         } catch (FileNotFoundException e) {
             responseMsg.setStatus(KVMessage.StatusType.GET_ERROR);
             logger.info("Could not retrieve value for key:" + key + ". File doesnt exist");
         }
+
         return responseMsg;
     }
 
@@ -123,6 +136,12 @@ public class KVServer extends Thread implements IKVServer {
 
         if (value.isEmpty()) {
             logger.info("Delete KV with key: " + key);
+
+			if (cache.inCache(key)) {
+				// Delete KV pair from cache
+				cache.putKV(key, null);
+			}
+
             if (fileAlreadyExists) {
                 storage.deleteFile(key);
                 logger.info("Successfully deleted KV with key:" + key);
@@ -134,6 +153,7 @@ public class KVServer extends Thread implements IKVServer {
         } else {
             response.setStatus(KVMessage.StatusType.PUT_ERROR);
             try {
+				cache.putKV(key, value);
                 storage.writeToDisk(key, value);
                 if (fileAlreadyExists){
                     response.setStatus(KVMessage.StatusType.PUT_UPDATE);
@@ -159,7 +179,9 @@ public class KVServer extends Thread implements IKVServer {
 
     @Override
     public void clearStorage() {
-        // TODO Auto-generated method stub
+		clearCache();
+
+		// TODO write clear storage implementation
     }
 
     @Override

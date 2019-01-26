@@ -70,13 +70,13 @@ public class DLL {
 
 	/**
 	 * Deletes from the front of the DLL
-	 * @throws Exception if attempting to delete from empty linked list
+	 * @throws RuntimeException if attempting to delete from empty linked list
 	 */
-	public Node deleteFront() throws Exception {
+	public Node deleteFront() throws RuntimeException {
 		Node deletedNode = head;
 
 		if(size == 0) {
-			throw new Exception("Unable to delete from empty linked list");
+			throw new RuntimeException("Unable to delete from empty linked list");
 		} else if(size == 1) {
 			head = null;
 			tail = null;

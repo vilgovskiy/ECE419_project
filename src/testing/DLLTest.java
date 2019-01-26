@@ -114,15 +114,11 @@ public class DLLTest extends TestCase {
 
 		dll.insertFront(n1);
 
-		try {
-			Node deleted = dll.deleteFront();
-			assertTrue(deleted == n1);
-			assertTrue(dll.getSize() == 0);
-			assertNull(dll.getHead());
-			assertNull(dll.getTail());
-		} catch (Exception e) {
-			System.out.print("Attempted to delete on empty list");
-		}
+		Node deleted = dll.deleteFront();
+		assertTrue(deleted == n1);
+		assertTrue(dll.getSize() == 0);
+		assertNull(dll.getHead());
+		assertNull(dll.getTail());
 	}
 
 	@Test

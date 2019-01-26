@@ -24,17 +24,17 @@ public abstract class Cache {
 	/**
 	 * Retrieve the value for the given key
 	 * @return value associated with key
-	 * @throws Exception if key not in cache
+	 * @throws RuntimeException if key not in cache
 	 */
-	 public abstract String getKV(String key) throws Exception;
+	 public abstract String getKV(String key) throws RuntimeException;
 
 	/**
 	 * If value is null, delete key value pair associated with key
 	 * If key is in cache, update the value associated with key
 	 * Else insert KV pair in cache, evict KV pair if cache is full
-	 * @throws Exception if value is null, but key is not in cache
+	 * @throws RuntimeException if value is null, but key is not in cache
 	 */
-	 public abstract void putKV(String key, String value) throws Exception;
+	 public abstract void putKV(String key, String value) throws RuntimeException;
 
 	/**
 	 * Check if key is in cache

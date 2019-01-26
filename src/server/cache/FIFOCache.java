@@ -15,16 +15,16 @@ public class FIFOCache extends Cache {
 	}
 
 	@Override
-	public synchronized String getKV(String key) throws Exception {
+	public synchronized String getKV(String key) throws RuntimeException {
 		if(inCache(key)) {
 			return hmap.get(key).value;
 		} else {
-			throw new Exception("Key not in cache");
+			throw new RuntimeException("Attempted to access key not in cache");
 		}
 	}
 
 	@Override
-	public synchronized void putKV(String key, String value) throws Exception {
+	public synchronized void putKV(String key, String value) throws RuntimeException {
 		if(inCache(key)) {
 			if(value == null) {
 				// delete KV pair
@@ -37,7 +37,7 @@ public class FIFOCache extends Cache {
 			}
 		} else {
 			if(value == null) {
-				throw new Exception("Unable to delete, key not in cache");
+				throw new RuntimeException("Attemped to delete a key not in cache");
 			} else {
 				if(size == maxSize) {
 					// evict KV pair

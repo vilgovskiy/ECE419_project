@@ -7,13 +7,13 @@ import server.cache.LRUCache;
 
 public class LRUCacheTest extends CacheTest {
 
-	public void setUp() throws Exception {
+	public void setUp() {
 		cache = new LRUCache(3);
 		cache.putKV("key", "val");
 	}
 
 	@Test
-	public void testGetAndEvict() throws Exception {
+	public void testGetAndEvict() {
 		cache.putKV("key_2", "val_2");
 		cache.putKV("key_3", "val_3");
 		cache.getKV("key");
@@ -26,7 +26,7 @@ public class LRUCacheTest extends CacheTest {
 	}
 
 	@Test
-	public void testUpdateAndEvict() throws Exception {
+	public void testUpdateAndEvict() {
 		cache.putKV("key_2", "val_2");
 		cache.putKV("key_3", "val_3");
 
