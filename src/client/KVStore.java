@@ -32,14 +32,6 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		this.port = port;
 	}
 
-	public String getAddress() {
-		return address;
-	}
-
-	public int getPort() {
-		return port;
-	}
-
 	@Override
 	public void connect() throws Exception {
 		if (clientSocket != null) {
@@ -47,8 +39,10 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		}
 		else {
 			clientSocket = new Socket(address, port);
+			input = new BufferedInputStream(clientSocket.getInputStream());
+			output = new BufferedOutputStream(clientSocket.getOutputStream());
 			setRunning(true);
-			logger.info("Connection Established");	
+			logger.info("connection established");
 		}
 	}
 
@@ -68,28 +62,41 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		}
 	}
 
-	// TODO: implement request using send/receivemessage
-	public void request(KVMessage reqMessage) {
-
-	}
-
 
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
-		return new JsonMessage(KVMessage.StatusType.PUT, key, value);
+		logger.info("PUT request to server. Key: " + key + " , Value: " + value);
+
+		JsonMessage jsonReq = new JsonMessage(KVMessage.StatusType.PUT, key, value);
+		TextMessage req = new TextMessage(jsonReq.serialize());
+		sendMessage(req);
+		TextMessage resp = receiveMessage();
+		JsonMessage jsonResp = new JsonMessage();
+		jsonResp.deserialize(resp.getMsg());
+
+		return jsonResp;
 	}
 
 	@Override
 	public KVMessage get(String key) throws Exception {
-		return new JsonMessage(KVMessage.StatusType.GET, key, "");
+		logger.info("GET request to server. Key: " + key);
+
+		JsonMessage jsonReq = new JsonMessage(KVMessage.StatusType.GET, key, "");
+		TextMessage req = new TextMessage(jsonReq.serialize());
+		sendMessage(req);
+		TextMessage resp = receiveMessage();
+		JsonMessage jsonResp = new JsonMessage();
+		jsonResp.deserialize(resp.getMsg());
+
+		return jsonResp;
 	}
 
 	public boolean isRunning(){
 		return running;
 	}
-	
+
 	public void setRunning(boolean run){
 		running = run;
 	}
-	
+
 }

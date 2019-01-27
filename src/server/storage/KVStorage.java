@@ -15,31 +15,30 @@ public class KVStorage implements IKVStorage {
     private static KVStorage storageInstance = null;
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
-    private String storageFilePath;
+    private String dataFilePath = "data";
     private long currLength;
 
-    private KVStorage(String filePath) {
-        this.storageFilePath = filePath;
+    private KVStorage() {
         createStorageFile();
         this.currLength = 0;
     }
 
     public static KVStorage getInstance() {
         if (storageInstance == null) {
-            storageInstance = new KVStorage("data");
+            storageInstance = new KVStorage();
         }
         return storageInstance;
     }
 
     private void createStorageFile() {
-        File storageFile = new File(storageFilePath);
+        File storageFile = new File(dataFilePath);
         if (!storageFile.exists()) {
             try {
                 boolean createFile = storageFile.createNewFile();
-                if (!createFile) logger.info("storage file " + storageFilePath + " exists already");
-                else logger.info("storage file " + storageFilePath + " created");
+                if (!createFile) logger.info("data file " + dataFilePath + " exists already");
+                else logger.info("data file " + dataFilePath + " created");
             } catch (IOException e) {
-                logger.error("cannot create data file" + storageFilePath);
+                logger.error("cannot create data file" + dataFilePath);
             }
         }
     }
@@ -48,15 +47,15 @@ public class KVStorage implements IKVStorage {
         return currLength;
     }
 
-    public String getStorageFilePath() {
-        return storageFilePath;
+    public String getDataFilePath() {
+        return dataFilePath;
     }
 
     @Override
     public long write(KVData kvData) throws Exception {
         rwLock.writeLock().lock();
         try {
-            RandomAccessFile raf = new RandomAccessFile(storageFilePath, "rw");
+            RandomAccessFile raf = new RandomAccessFile(dataFilePath, "rw");
             raf.seek(raf.length());
             raf.write(kvData.toByteArray());
             currLength = raf.length();
@@ -74,8 +73,10 @@ public class KVStorage implements IKVStorage {
         try {
             KVData foundEntry = new KVData();
             boolean found = false;
-            RandomAccessFile raf = new RandomAccessFile( storageFilePath, "r");
+            RandomAccessFile raf = new RandomAccessFile( dataFilePath, "r");
             long currOffset = raf.length();
+            if (currOffset <= 0) return foundEntry;
+
             byte[] keySizeBytes = new byte[4];
             byte[] valueSizeBytes = new byte[4];
 
@@ -100,7 +101,7 @@ public class KVStorage implements IKVStorage {
                     String value = new String(valueBytes, Charset.forName("UTF-8"));
                     foundEntry.setKey(key);
                     foundEntry.setValue(value);
-                    foundEntry.setOffset(currOffset + keySize + valueSize + 8);
+                    //foundEntry.setOffset(currOffset + keySize + valueSize + 8);
                     found = true;
                     break;
                 }
@@ -122,7 +123,7 @@ public class KVStorage implements IKVStorage {
             byte[] keySizeBytes = new byte[4];
             byte[] valueSizeBytes = new byte[4];
 
-            RandomAccessFile raf = new RandomAccessFile(storageFilePath, "r");
+            RandomAccessFile raf = new RandomAccessFile(dataFilePath, "r");
             index -= 8;
             raf.seek(index);
             raf.read(keySizeBytes);
@@ -143,7 +144,7 @@ public class KVStorage implements IKVStorage {
                 String value = new String(valueBytes, Charset.forName("UTF-8"));
                 foundEntry.setKey(key);
                 foundEntry.setValue(value);
-                foundEntry.setOffset(index);
+                //foundEntry.setOffset(index);
                 found = true;
             } else {
                 logger.error("cannot find key " + key + " from index");
@@ -153,5 +154,11 @@ public class KVStorage implements IKVStorage {
         } finally {
             rwLock.readLock().unlock();
         }
+    }
+
+    public void clearStorage() {
+        File storageFile = new File(dataFilePath);
+        storageFile.delete();
+        assert(!storageFile.exists());
     }
 }

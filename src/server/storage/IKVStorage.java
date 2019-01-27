@@ -8,4 +8,6 @@ public interface IKVStorage {
 
     KVData readFromIndex(String key, long index) throws Exception;
 
+    void clearStorage();
+
 }

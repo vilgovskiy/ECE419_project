@@ -31,68 +31,17 @@ public class AdditionalTest extends TestCase {
         File storageFile = new File("data");
         assert(storageFile.exists());
 
-        List<KVData> dataList = new ArrayList<>();
-        List<KVData> updateDataList = new ArrayList<>();
-        List<KVData> readDataList = new ArrayList<>();
-        HashMap<String, Long> indexMap = new HashMap<>();
+        KVData data1 = new KVData("key", "value");
+        KVData data2 = new KVData("key1", "");
 
-        for (int i = 1; i <= 20; i++) {
-            String key = "key-" + i;
-            String value = "value-" + i;
-            KVData entry = new KVData(key, value);
-            dataList.add(entry);
+        KVData foundEntry = new KVData();
+        try {
+            storage.write(data1);
+            storage.write(data2);
+            foundEntry = storage.read("key1");
+        } catch (Exception e) {}
 
-            if (i%4 == 0) {
-                KVData updateEntry = new KVData(key, "updateValue-"+i);
-                updateDataList.add(updateEntry);
-                readDataList.add(updateEntry);
-            } else {
-                readDataList.add(entry);
-            }
-        }
-
-        for (KVData entry : dataList) {
-            try {
-                long offset = storage.write(entry);
-                indexMap.put(entry.getKey(), offset);
-            } catch (Exception e) {
-                logger.error("io exception during write", e);
-            }
-        }
-
-        for (KVData updatedEntry : updateDataList) {
-            try {
-                long offset = storage.write(updatedEntry);
-                indexMap.put(updatedEntry.getKey(), offset);
-            } catch (Exception e) {
-                logger.error("io exception during updated write", e);
-            }
-        }
-        assertEquals("File_contents 1", funcOut);
-
-        for (KVData readEntry : readDataList) {
-            try {
-                KVData foundEntry = storage.read(readEntry.getKey());
-                assert(foundEntry.getKey().equals(readEntry.getKey()));
-                assert(foundEntry.getValue().equals(readEntry.getValue()));
-            } catch (Exception e) {
-                logger.error("io exception during read", e);
-            }
-        }
-
-        for (int i = 1; i <= 20; i++) {
-            String key = "key-"+i;
-            String value = "value-"+i;
-            if (i%4==0) value = "updateValue-"+i;
-            long offset = indexMap.get(key);
-            try {
-                KVData foundEntry = storage.readFromIndex(key, offset);
-                assert(foundEntry.getKey().equals(key));
-                assert(foundEntry.getValue().equals(value));
-            } catch (Exception e) {
-                logger.error("io exception during readFromIndex", e);
-            }
-        }
+        assert(foundEntry.getValue().equals(""));
         storageFile.delete();
     }
 
