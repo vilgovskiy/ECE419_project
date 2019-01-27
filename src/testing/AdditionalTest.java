@@ -55,7 +55,7 @@ public class AdditionalTest extends TestCase {
             try {
                 long offset = storage.write(entry);
                 indexMap.put(entry.getKey(), offset);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("io exception during write", e);
             }
         }
@@ -64,7 +64,7 @@ public class AdditionalTest extends TestCase {
             try {
                 long offset = storage.write(updatedEntry);
                 indexMap.put(updatedEntry.getKey(), offset);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("io exception during updated write", e);
             }
         }
@@ -74,7 +74,7 @@ public class AdditionalTest extends TestCase {
                 KVData foundEntry = storage.read(readEntry.getKey());
                 assert(foundEntry.getKey().equals(readEntry.getKey()));
                 assert(foundEntry.getValue().equals(readEntry.getValue()));
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("io exception during read", e);
             }
         }
@@ -88,7 +88,7 @@ public class AdditionalTest extends TestCase {
                 KVData foundEntry = storage.readFromIndex(key, offset);
                 assert(foundEntry.getKey().equals(key));
                 assert(foundEntry.getValue().equals(value));
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("io exception during readFromIndex", e);
             }
         }
