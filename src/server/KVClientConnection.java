@@ -6,6 +6,7 @@ import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 
 import shared.communication.AbstractCommunication;
 import shared.messages.TextMessage;
@@ -54,16 +55,13 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                     logger.error("Error! Connection lost!");
                     isOpen = false;
                 } catch (Exception e) {
-					logger.error("Error! Exception ");
+					logger.error("Error receiving connection!", e);
 					isOpen = false;
 				}
             }
-
         } catch (IOException ioe) {
             logger.error("Error! Connection could not be established!", ioe);
-
         } finally {
-
             try {
                 if (clientSocket != null) {
                     input.close();
@@ -81,12 +79,12 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
         logger.info("Received message from " + clientSocket.getInetAddress());
         switch (msg.getStatus()) {
             case PUT:
-                logger.info("Put request for key: " + msg.getKey() + " value: " + msg.getValue());
+                logger.info("PUT request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
                 response = kvServer.putKV(msg.getKey(), msg.getValue());
                 break;
 
             case GET:
-                logger.info("Put request for key: " + msg.getKey() + " value: " + msg.getValue());
+                logger.info("GET request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
                 response = kvServer.getKV(msg.getKey());
                 break;
             default:

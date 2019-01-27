@@ -24,13 +24,12 @@ public class KVStorage implements IKVStorage {
     }
 
     public static KVStorage getInstance() {
-        if (storageInstance == null) {
-            storageInstance = new KVStorage();
-        }
+        if (storageInstance == null) storageInstance = new KVStorage();
         return storageInstance;
     }
 
     private void createStorageFile() {
+        logger.info("creating data file at " + dataFilePath + "...");
         File storageFile = new File(dataFilePath);
         if (!storageFile.exists()) {
             try {
@@ -38,7 +37,7 @@ public class KVStorage implements IKVStorage {
                 if (!createFile) logger.info("data file " + dataFilePath + " exists already");
                 else logger.info("data file " + dataFilePath + " created");
             } catch (IOException e) {
-                logger.error("cannot create data file" + dataFilePath);
+                logger.error("cannot create data file" + dataFilePath, e);
             }
         }
     }
@@ -52,7 +51,7 @@ public class KVStorage implements IKVStorage {
     }
 
     @Override
-    public long write(KVData kvData) throws Exception {
+    public void write(KVData kvData) throws IOException {
         rwLock.writeLock().lock();
         try {
             RandomAccessFile raf = new RandomAccessFile(dataFilePath, "rw");
@@ -60,27 +59,27 @@ public class KVStorage implements IKVStorage {
             raf.write(kvData.toByteArray());
             currLength = raf.length();
             raf.close();
-            return currLength;
         } finally {
             rwLock.writeLock().unlock();
         }
     }
 
-
     @Override
-    public KVData read(String key) throws Exception {
+    public KVData read(String key) throws IOException {
         rwLock.readLock().lock();
         try {
             KVData foundEntry = new KVData();
             boolean found = false;
             RandomAccessFile raf = new RandomAccessFile( dataFilePath, "r");
             long currOffset = raf.length();
-            if (currOffset <= 0) return foundEntry;
+            if (currOffset == 0) {
+                return null;
+            }
 
             byte[] keySizeBytes = new byte[4];
             byte[] valueSizeBytes = new byte[4];
 
-            while (currOffset >= 0) {
+            while (currOffset > 0) {
                 currOffset -= 8;
                 raf.seek(currOffset);
                 raf.read(keySizeBytes);
@@ -101,7 +100,6 @@ public class KVStorage implements IKVStorage {
                     String value = new String(valueBytes, Charset.forName("UTF-8"));
                     foundEntry.setKey(key);
                     foundEntry.setValue(value);
-                    //foundEntry.setOffset(currOffset + keySize + valueSize + 8);
                     found = true;
                     break;
                 }
@@ -115,17 +113,19 @@ public class KVStorage implements IKVStorage {
 
     // Directly read the file from index using seek, can only be called by get in cache operation
     @Override
-    public KVData readFromIndex(String key, long index) throws Exception {
+    public boolean checkIfKeyExists(String key) throws IOException {
         rwLock.readLock().lock();
         try {
-            KVData foundEntry = new KVData();
             boolean found = false;
             byte[] keySizeBytes = new byte[4];
             byte[] valueSizeBytes = new byte[4];
 
             RandomAccessFile raf = new RandomAccessFile(dataFilePath, "r");
-            index -= 8;
-            raf.seek(index);
+            long currOffset = raf.length();
+            if (currOffset == 0) return false;
+
+            currOffset -= 8;
+            raf.seek(currOffset);
             raf.read(keySizeBytes);
             raf.read(valueSizeBytes);
 
@@ -133,32 +133,28 @@ public class KVStorage implements IKVStorage {
             int valueSize = ByteBuffer.wrap(valueSizeBytes).getInt();
 
             byte[] keyBytes = new byte[keySize];
-            index -= (keySize + valueSize);
-            raf.seek(index);
+            currOffset -= (keySize + valueSize);
+            raf.seek(currOffset);
             raf.read(keyBytes);
             String keyString = new String(keyBytes, Charset.forName("UTF-8"));
 
-            if (keyString.equals(key)) {
-                byte[] valueBytes = new byte[valueSize];
-                raf.read(valueBytes);
-                String value = new String(valueBytes, Charset.forName("UTF-8"));
-                foundEntry.setKey(key);
-                foundEntry.setValue(value);
-                //foundEntry.setOffset(index);
+            if (keyString.equals(key) && valueSize != 0) {
                 found = true;
-            } else {
-                logger.error("cannot find key " + key + " from index");
             }
             raf.close();
-            return found ? foundEntry : null;
+            return found;
         } finally {
             rwLock.readLock().unlock();
         }
     }
 
     public void clearStorage() {
+        logger.info("deleting storage data file " + dataFilePath + "...");
         File storageFile = new File(dataFilePath);
-        storageFile.delete();
+        if (storageFile.exists()) {
+            storageFile.delete();
+            logger.info("storage data file " + dataFilePath + " deleted");
+        }
         assert(!storageFile.exists());
     }
 }

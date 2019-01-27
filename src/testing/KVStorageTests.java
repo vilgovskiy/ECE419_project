@@ -14,7 +14,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 
-public class AdditionalTest extends TestCase {
+public class KVStorageTests extends TestCase {
     private static Logger logger = Logger.getRootLogger();
 
     static {

@@ -152,10 +152,11 @@ public class KVClient implements IKVClient, Runnable {
     @Override
     public void newConnection(String hostname, int port) throws Exception {
         if (store != null) {
-            throw new Exception("connection has already been established!");
+            printStatus("connection has already been established at " + store.getAddress() + ":" + store.getPort() + "!");
+        } else {
+            store = new KVStore(hostname, port);
+            store.connect();
         }
-        store = new KVStore(hostname, port);
-        store.connect();
     }
 
     private void closeConnection() {

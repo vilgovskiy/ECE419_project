@@ -61,8 +61,7 @@ public class KVServer extends Thread implements IKVServer {
 				break;
 			default:
 		}
-
-        logger.info("Creating an instance of the KV server");
+        logger.info("creating an instance of the KV server...");
     }
 
     @Override
@@ -91,12 +90,11 @@ public class KVServer extends Thread implements IKVServer {
     @Override
     public boolean inStorage(String key) {
         try {
-            KVData entry = storage.read(key);
-            return !entry.getValue().equals("");
+            return storage.checkIfKeyExists(key);
         } catch (Exception e) {
-            logger.error("IO Exception during searching key " + key + " in storage");
+            logger.error("Error while searching key: " + key + " in storage", e);
+            return false;
         }
-        return false;
     }
 
     @Override
@@ -120,9 +118,9 @@ public class KVServer extends Thread implements IKVServer {
                     responseMsg.setValue(value);
                     responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
                     cache.putKV(key, value);
-                    logger.info("GET_SUCCESS for key:" + key + ", value: " + foundEntry.getValue());
+                    logger.info("GET_SUCCESS for <key: " + key + ", value: " + foundEntry.getValue() + ">");
                 } catch (Exception e) {
-                    logger.error("error while reading key" + key + " from storage", e);
+                    logger.error("Error while finding key: " + key + " from storage", e);
                     responseMsg.setStatus(KVMessage.StatusType.GET_ERROR);
                 }
             } else {
@@ -145,19 +143,18 @@ public class KVServer extends Thread implements IKVServer {
 			if (cache.inCache(key)) {
 				cache.putKV(key, null);
 			}
-
             if (entryExists) {
                 try {
                     storage.write(new KVData(key, ""));
-                    logger.info("Successfully deleted KV with key:" + key);
+                    logger.info("Successfully deleted entry with key: " + key);
                     responseMsg.setStatus(KVMessage.StatusType.DELETE_SUCCESS);
                 } catch (Exception e) {
                     responseMsg.setStatus(KVMessage.StatusType.DELETE_ERROR);
-                    logger.warn("Unable to delete key: " + key, e);
+                    logger.warn("Error while deleting key: " + key + " from storage", e);
                 }
             } else {
                 responseMsg.setStatus(KVMessage.StatusType.DELETE_ERROR);
-                logger.warn("Unable to delete key:" + key + " doesn't exist!");
+                logger.warn("Unable to delete key: " + key + ", the key doesn't exist!");
             }
         } else {
 			responseMsg.setStatus(KVMessage.StatusType.PUT_ERROR);
@@ -168,13 +165,13 @@ public class KVServer extends Thread implements IKVServer {
 
 					if (entryExists) {
                         responseMsg.setStatus(KVMessage.StatusType.PUT_UPDATE);
-                        logger.info("Successfully updated {key:" + key + ", value:" + value + "}");
+                        logger.info("Successfully updated <key: " + key + ", value: " + value + ">");
                     } else {
                         responseMsg.setStatus(KVMessage.StatusType.PUT_SUCCESS);
-                        logger.info("Successfully inserted {key: " + key + ", value:" + value + "}");
+                        logger.info("Successfully inserted <key: " + key + ", value: " + value + ">");
                     }
             	} catch (Exception e) {
-            	    logger.error("Unable to put {key: " + key + ", value: " + value + "} in storage", e);
+            	    logger.error("Unable to put <key: " + key + ", value: " + value + "> in storage", e);
             	    responseMsg.setStatus(KVMessage.StatusType.PUT_ERROR);
                 }
 			}
@@ -235,10 +232,10 @@ public class KVServer extends Thread implements IKVServer {
     }
 
     private boolean initializeKVServer() {
-        logger.info("Starting the KVSertver");
+        logger.info("Starting KVServer...");
         try {
             serverSocket = new ServerSocket(port);
-            logger.info("Server listening on the port" + serverSocket.getLocalPort());
+            logger.info("Server listening on the port " + serverSocket.getLocalPort());
             return true;
         } catch (IOException e) {
             logger.error("Cannot open server socket:");
@@ -321,6 +318,5 @@ public class KVServer extends Thread implements IKVServer {
             e.printStackTrace();
             System.exit(1);
 		}
-
     }
 }
