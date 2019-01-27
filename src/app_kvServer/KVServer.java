@@ -101,7 +101,7 @@ public class KVServer extends Thread implements IKVServer {
             KVData entry = storage.read(key);
             return !entry.getValue().equals("");
         } catch (Exception e) {
-            logger.error("IO Exception during searching key " + key + " in storage", e);
+            logger.error("IO Exception during searching key " + key + " in storage");
         }
         return false;
     }
@@ -167,6 +167,7 @@ public class KVServer extends Thread implements IKVServer {
                 logger.warn("Unable to delete key:" + key + " doesn't exist!");
             }
         } else {
+			responseMsg.setStatus(KVMessage.StatusType.PUT_ERROR);
 			if (checkValidKeyValue(key, value)){
             	try {
             	    storage.write(new KVData(key, value));
