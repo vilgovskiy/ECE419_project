@@ -205,10 +205,12 @@ public class KVServer extends Thread implements IKVServer {
                             + client.getInetAddress().getHostName()
                             + " on port " + client.getPort());
                 } catch (SocketException se) {
-					logger.error("Error! socket exception");
+					logger.error("Error! Socket exception during connection. ");
 				} catch (IOException e) {
                     logger.error("Error! " +
                             "Unable to establish connection. \n", e);
+                } catch (Exception e) {
+                    logger.error("Error! Problem occured during connection");
                 }
             }
             logger.info("Server is stopped");
