@@ -19,7 +19,7 @@ public class KVStorage implements IKVStorage {
     private long currLength;
 
     private KVStorage() {
-        createStorageFile();
+        openStorageFile();
         this.currLength = 0;
     }
 
@@ -28,7 +28,7 @@ public class KVStorage implements IKVStorage {
         return storageInstance;
     }
 
-    private void createStorageFile() {
+    private void openStorageFile() {
         logger.info("creating data file at " + dataFilePath + "...");
         File storageFile = new File(dataFilePath);
         if (!storageFile.exists()) {
@@ -156,6 +156,6 @@ public class KVStorage implements IKVStorage {
             logger.info("storage data file " + dataFilePath + " deleted");
         }
         assert(!storageFile.exists());
-        createStorageFile();
+        openStorageFile();
     }
 }
