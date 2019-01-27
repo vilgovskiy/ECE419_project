@@ -47,7 +47,7 @@ public class KVServer extends Thread implements IKVServer {
         this.port = port;
         this.cacheSize = cacheSize;
         this.strategy = CacheStrategy.valueOf(strategy);
-        storage = KVStorage.getInstance();
+        if (storage == null ) storage = KVStorage.getInstance();
 
 		switch (this.strategy) {
 			case FIFO:

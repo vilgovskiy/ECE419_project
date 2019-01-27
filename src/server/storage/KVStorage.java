@@ -156,5 +156,6 @@ public class KVStorage implements IKVStorage {
             logger.info("storage data file " + dataFilePath + " deleted");
         }
         assert(!storageFile.exists());
+        createStorageFile();
     }
 }
