@@ -6,11 +6,14 @@ import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.net.Socket;
-import java.net.SocketException;
 
 import shared.communication.AbstractCommunication;
 import shared.messages.TextMessage;
 import shared.messages.JsonMessage;
+
+import com.google.gson.JsonSyntaxException;
+import java.lang.IllegalStateException;
+
 
 public class KVClientConnection extends AbstractCommunication implements Runnable {
     private static Logger logger = Logger.getRootLogger();
@@ -48,9 +51,10 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                     TextMessage respText =new TextMessage(response.serialize());
                     sendMessage(respText);
 
-
                     /* connection either terminated by the client or lost due to
                      * network problems*/
+                } catch (JsonSyntaxException | IllegalStateException se) {
+                    logger.warn("Error parsing incoming message from client! ", se);
                 } catch (IOException ioe) {
                     logger.error("Error! Connection lost!");
                     isOpen = false;
