@@ -11,13 +11,13 @@ public class KVStorage implements IKVStorage {
     }
 
     @Override
-    public void writeToDisk(String key, String value) throws FileNotFoundException, UnsupportedEncodingException {
+    public synchronized void writeToDisk(String key, String value) throws FileNotFoundException, UnsupportedEncodingException {
         PrintWriter writer = new PrintWriter(storagePath + key + ".txt", "UTF-8");
         writer.write(value);
         writer.close();
     }
 
-    public String getFileContents(String key) throws FileNotFoundException {
+    public synchronized String getFileContents(String key) throws FileNotFoundException {
         File file = new File(storagePath + key + ".txt");
         BufferedReader br = new BufferedReader(new FileReader(file));
         String st;
@@ -40,5 +40,12 @@ public class KVStorage implements IKVStorage {
         File file = new File(storagePath + key + txtExtension);
         return file.exists();
     }
+
+	public void clearStorage (){
+		File dir = new File(storagePath);
+		File[] ls = dir.listFiles();
+		for (File file : ls) file.delete();
+				
+	}
 
 }

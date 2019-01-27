@@ -88,7 +88,7 @@ public abstract class AbstractCommunication implements CommunicationInterface {
 
 		/* build final String */
 		TextMessage msg = new TextMessage(msgBytes);
-		logger.info("Receive message:\t '" + msg.getMsg() + "'");
+		//logger.info("Receive message:\t '" + msg.getMsg() + "'");
 		return msg;
 	}
 }
