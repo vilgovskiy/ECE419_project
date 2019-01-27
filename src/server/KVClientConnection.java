@@ -72,6 +72,7 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                     input.close();
                     output.close();
                     clientSocket.close();
+                    clientSocket = null;
                 }
             } catch (IOException ioe) {
                 logger.error("Error! Unable to tear down connection!", ioe);
