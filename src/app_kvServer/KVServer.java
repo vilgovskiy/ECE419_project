@@ -62,13 +62,6 @@ public class KVServer extends Thread implements IKVServer {
 			default:
 		}
 
-		try {
-			new LogSetup("logs/server.log", Level.ALL);
-		} catch (IOException e) {
-            System.out.println("Error! Unable to initialize logger!");
-            e.printStackTrace();
-            System.exit(1);
-		}
         logger.info("Creating an instance of the KV server");
     }
 
@@ -306,6 +299,7 @@ public class KVServer extends Thread implements IKVServer {
      */
     public static void main(String[] args) {
         try {
+			new LogSetup("logs/server.log", Level.ALL);
 
             if (args.length != 3) {
                 System.out.println("Error! Invalid number of arguments!");
@@ -322,6 +316,11 @@ public class KVServer extends Thread implements IKVServer {
             System.out.println("Error! Invalid argument <port> or <cache_size>! Not a number!");
             System.out.println("Usage: Server <port>!");
             System.exit(1);
-        }
+        } catch (IOException e) {
+            System.out.println("Error! Unable to initialize logger!");
+            e.printStackTrace();
+            System.exit(1);
+		}
+
     }
 }
