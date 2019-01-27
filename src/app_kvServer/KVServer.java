@@ -230,6 +230,7 @@ public class KVServer extends Thread implements IKVServer {
     @Override
     public void close() {
         kill();
+        clearCache();
         //TODO Might also need to wipe cache and remove all connections
     }
 
