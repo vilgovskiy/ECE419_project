@@ -43,7 +43,6 @@ public class KVClient implements IKVClient, Runnable {
         }
     }
 
-    // TODO: add KVMessage.statusType for get and put
     private void handleCommand(String cmdLine) {
         String[] token = cmdLine.split("\\s+");
         String cmd = token[0];
@@ -139,11 +138,13 @@ public class KVClient implements IKVClient, Runnable {
 
     @Override
     public void newConnection(String hostname, int port) throws Exception {
-        try {
+        if (store != null) {
+            logger.warn("connection has already been established at " + store.getAddress() + ":" + store.getPort());
+        }
+        else {
+            logger.info("connecting to server at " + hostname + ":" + (port));
             store = new KVStore(hostname, port);
             store.connect();
-        } catch(Exception e) {
-            logger.warn("connection cannot be established!", e);
         }
     }
 
@@ -222,6 +223,5 @@ public class KVClient implements IKVClient, Runnable {
     private void printError(String error){
 		System.out.println(PROMPT + "Error! " +  error);
     }
-    
 
 }

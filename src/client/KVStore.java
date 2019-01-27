@@ -29,6 +29,14 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		this.port = port;
 	}
 
+	public String getAddress() {
+		return address;
+	}
+
+	public int getPort() {
+		return port;
+	}
+
 	@Override
 	public void connect() throws Exception {
 		if (clientSocket != null) {

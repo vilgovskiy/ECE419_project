@@ -6,11 +6,11 @@ import java.nio.charset.Charset;
 public class KVData {
     static final String encoding = "UTF-8";
 
-    long offset;
     int keySize;
     int valueSize;
     private String key;
     private String value;
+    private long offset;
 
     public KVData() {}
 
@@ -29,6 +29,8 @@ public class KVData {
         return value;
     }
 
+    public long getOffset() { return offset; }
+
     public void setKey(String key) {
         this.key = key;
         this.keySize = key.getBytes().length;
@@ -37,6 +39,10 @@ public class KVData {
     public void setValue(String value) {
         this.value = value;
         this.valueSize = value.getBytes().length;
+    }
+
+    public void setOffset(long offset) {
+        this.offset = offset;
     }
 
     // return the unit size of the data entry in byte size

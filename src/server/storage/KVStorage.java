@@ -9,19 +9,18 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 public class KVStorage implements IKVStorage {
-
     private static Logger logger = Logger.getRootLogger();
-    private static final String fileExt = ".db";
 
     private String storageFilePath;
-    private String storageFileName;
-    private File storageFile;
+    private int storageFileIndex;
     private long currLength;
+    public long previousFilesOffset;
 
     // Constructor that initialize KVStorage instance with new file
-    public KVStorage(String fileName) {
-        this.storageFileName = fileName;
-        this.storageFilePath = fileName + fileExt;
+    public KVStorage(String filePath, int fileIndex, long previousFilesOffset) {
+        this.storageFilePath = filePath;
+        this.storageFileIndex = fileIndex;
+        this.previousFilesOffset = previousFilesOffset;
         openStorageFile();
         this.currLength = 0;
     }
@@ -30,13 +29,13 @@ public class KVStorage implements IKVStorage {
     public KVStorage(String filePath, long currLength) {
         this.storageFilePath = filePath;
         this.currLength = currLength;
-        this.storageFileName = filePath.split("/")[2].replaceAll(fileExt, "");
     }
 
     private void openStorageFile() {
-        if (storageFile == null) {
+        File storageFile = new File(storageFilePath);
+        if (!storageFile.exists()) {
             try {
-                storageFile = new File(storageFilePath);
+
                 boolean createFile = storageFile.createNewFile();
                 if (!createFile) logger.info("storage file " + storageFilePath + " exists already");
                 else logger.info("storage file " + storageFilePath + " created");
@@ -54,14 +53,18 @@ public class KVStorage implements IKVStorage {
         return storageFilePath;
     }
 
+    public int getStorageFileIndex() {
+        return storageFileIndex;
+    }
+
     @Override
     public synchronized long write(KVData kvData) throws IOException {
         RandomAccessFile raf = new RandomAccessFile(storageFilePath, "rw");
         raf.seek(raf.length());
         raf.write(kvData.toByteArray());
-        currLength = raf.length();  // the currentFileLength will be the file length after the append
+        currLength = raf.length();
         raf.close();
-        return currLength; // return the file length before appending as index for cache purpose
+        return previousFilesOffset + currLength;
     }
 
     // read the entire file to find the key
@@ -70,7 +73,7 @@ public class KVStorage implements IKVStorage {
         KVData foundEntry = new KVData();
         boolean found = false;
         RandomAccessFile raf = new RandomAccessFile( storageFilePath, "r");
-        long currOffset = raf.length(); // start reading the file from the current offset
+        long currOffset = raf.length();
         byte[] keySizeBytes = new byte[4];
         byte[] valueSizeBytes = new byte[4];
 
@@ -95,6 +98,7 @@ public class KVStorage implements IKVStorage {
                 String value = new String(valueBytes, Charset.forName("UTF-8"));
                 foundEntry.setKey(key);
                 foundEntry.setValue(value);
+                long newOffset 
                 found = true;
                 break;
             }
@@ -138,26 +142,5 @@ public class KVStorage implements IKVStorage {
         }
         raf.close();
         return found ? foundEntry : null;
-    }
-}
-
-class KVStorageReader implements Runnable {
-    private static Logger logger = Logger.getRootLogger();
-    KVStorage kvStorageInstance = null;
-    String targetKey;
-    KVData foundEntry = null;
-
-    public KVStorageReader(KVStorage kvStorage, String key) {
-        this.kvStorageInstance = kvStorage;
-        this.targetKey = key;
-    }
-
-    @Override
-    public void run() {
-        try {
-            foundEntry = kvStorageInstance.read(targetKey);
-        } catch(IOException e) {
-            logger.error("IOException during getting key from file: " + kvStorageInstance.getStorageFilePath());
-        }
     }
 }

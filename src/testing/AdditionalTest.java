@@ -3,8 +3,7 @@ package testing;
 import org.junit.Test;
 
 import junit.framework.TestCase;
-import server.storage.KVStorage;
-import server.storage.KVData;
+import server.storage.*;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
@@ -16,12 +15,41 @@ import java.util.ArrayList;
 
 public class AdditionalTest extends TestCase {
 
-    @Test
-    public void testKVStorage() {
-
+    static {
         try {
-            new LogSetup("logs/test.log", Level.OFF);
-        } catch(IOException e) {}
+            new LogSetup("logs/testing/test.log", Level.INFO);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Test
+    public void testKVStorageManager() {
+
+        KVStorageManager manager = KVStorageManager.getInstance();
+        List<KVData> dataList = new ArrayList<>();
+        List<Long> indexList = new ArrayList<>();
+
+        dataList.add(new KVData("key1", "value1"));
+        dataList.add(new KVData("key2", "value2"));
+        dataList.add(new KVData("object", "storageValue"));
+        dataList.add(new KVData("hello", "world"));
+
+        for (KVData data : dataList) {
+            try {
+                indexList.add(manager.put(data));
+            } catch (IOException e) {
+                System.out.println("IO Exception during write!");
+            }
+        }
+
+        System.out.println(indexList);
+        File dataFile = new File("data/0");
+        dataFile.delete();
+    }
+
+    /*@Test
+    public void testKVStorage() {
 
         KVStorage storage = new KVStorage("one");
         File storageFile = new File("/Users/brucechenchen/github/ECE419_project/one.db");
@@ -64,5 +92,5 @@ public class AdditionalTest extends TestCase {
                 System.out.println("Exception during read from index!");
             }
         }
-    }
+    }*/
 }
