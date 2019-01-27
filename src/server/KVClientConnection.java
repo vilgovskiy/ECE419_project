@@ -55,6 +55,7 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                      * network problems*/
                 } catch (JsonSyntaxException | IllegalStateException se) {
                     logger.warn("Error parsing incoming message from client! ", se);
+                    isOpen = false;
                 } catch (IOException ioe) {
                     logger.error("Error! Connection lost!");
                     isOpen = false;
