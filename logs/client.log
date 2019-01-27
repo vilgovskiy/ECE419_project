@@ -56,3 +56,8 @@ java.net.ConnectException: Connection refused (Connection refused)
 2019-01-26 21:24:06,278 INFO  [main] root: Send message:	 '{"status":"PUT","key":"key1","value":"bvalue1"}'
 2019-01-26 21:24:15,662 INFO  [main] root: PUT request to server. Key: key1 , Value: bvalue2
 2019-01-26 21:24:15,663 INFO  [main] root: Send message:	 '{"status":"PUT","key":"key1","value":"bvalue2"}'
+2019-01-26 22:30:43,705 INFO  [main] root: connection established
+2019-01-26 22:30:58,467 INFO  [main] root: PUT request to server. Key: hfelHGELHGO;Ghbno;rhgHGEVGEHGFEjjgEHG , Value: HGJKDFAL
+2019-01-26 22:30:58,498 INFO  [main] root: Send message:	 '{"status":"PUT","key":"hfelHGELHGO;Ghbno;rhgHGEVGEHGFEjjgEHG","value":"HGJKDFAL"}'
+2019-01-26 22:32:02,108 INFO  [main] root: PUT request to server. Key: hello , Value: 
+2019-01-26 22:32:02,110 INFO  [main] root: Send message:	 '{"status":"PUT","key":"hello","value":""}'

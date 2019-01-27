@@ -111,6 +111,7 @@ public class KVServer extends Thread implements IKVServer {
         JsonMessage response = new JsonMessage();
         response.setKey(key);
         response.setValue(value);
+		logger.info(key + "=================================================================" + value);
 
 
         if (value.isEmpty()) {
@@ -125,21 +126,27 @@ public class KVServer extends Thread implements IKVServer {
             }
         } else {
             response.setStatus(KVMessage.StatusType.PUT_ERROR);
-            try {
-                storage.writeToDisk(key, value);
-                if (fileAlreadyExists){
-                    response.setStatus(KVMessage.StatusType.PUT_UPDATE);
-                    logger.info("Successfully updated key:" + key + " with value:" + value);
-                } else {
-                    response.setStatus(KVMessage.StatusType.PUT_SUCCESS);
-                    logger.info("Successfully inserted key:" + key + " with value:" + value);
-                }
-
-            } catch (FileNotFoundException e) {
-                logger.error("Somehow file could not be found");
-            } catch (UnsupportedEncodingException e) {
-                logger.error("Unsupported encoding");
-            }
+			if (key != null 
+					&& !key.equals("")
+					&& !key.contains(" ")
+					&& key.getBytes().length <= 20 
+					&& value.getBytes().length <= (120 * 1024)){
+            	try {
+                	storage.writeToDisk(key, value);
+                	if (fileAlreadyExists){
+                	    response.setStatus(KVMessage.StatusType.PUT_UPDATE);
+                	    logger.info("Successfully updated key:" + key + " with value:" + value);
+                	} else {
+                	    response.setStatus(KVMessage.StatusType.PUT_SUCCESS);
+                	    logger.info("Successfully inserted key:" + key + " with value:" + value);
+                	}
+	
+            	} catch (FileNotFoundException e) {
+                	logger.error("Somehow file could not be found");
+            	} catch (UnsupportedEncodingException e) {
+                	logger.error("Unsupported encoding");
+            	}
+			}
         }
         return response;
     }
@@ -169,7 +176,7 @@ public class KVServer extends Thread implements IKVServer {
                             + client.getInetAddress().getHostName()
                             + " on port " + client.getPort());
                 } catch (SocketException se) {
-					logger.error("Error! socket exception", se);			
+					logger.error("Error! socket exception");			
 				} catch (IOException e) {
                     logger.error("Error! " +
                             "Unable to establish connection. \n", e);
