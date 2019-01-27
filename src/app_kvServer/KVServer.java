@@ -2,8 +2,7 @@ package app_kvServer;
 
 
 import logger.LogSetup;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.log4j.*;
 import server.cache.*;
 import server.IKVStorage;
 import server.KVClientConnection;
@@ -16,6 +15,7 @@ import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.BindException;
 import java.net.ServerSocket;
+import java.net.SocketException;
 import java.net.Socket;
 
 public class KVServer extends Thread implements IKVServer {
@@ -61,12 +61,19 @@ public class KVServer extends Thread implements IKVServer {
 			default:
 		}
 
+		try {
+			new LogSetup("logs/server.log", Level.ALL);
+		} catch (IOException e) {
+            System.out.println("Error! Unable to initialize logger!");
+            e.printStackTrace();
+            System.exit(1);
+		}
         logger.info("Creating an instance of the KV server");
     }
 
     @Override
     public int getPort() {
-        return port;
+        return serverSocket.getLocalPort();
     }
 
     @Override
@@ -132,6 +139,7 @@ public class KVServer extends Thread implements IKVServer {
         JsonMessage response = new JsonMessage();
         response.setKey(key);
         response.setValue(value);
+		logger.info(key + "=================================================================" + value);
 
 
         if (value.isEmpty()) {
@@ -152,22 +160,28 @@ public class KVServer extends Thread implements IKVServer {
             }
         } else {
             response.setStatus(KVMessage.StatusType.PUT_ERROR);
-            try {
-				cache.putKV(key, value);
-                storage.writeToDisk(key, value);
-                if (fileAlreadyExists){
-                    response.setStatus(KVMessage.StatusType.PUT_UPDATE);
-                    logger.info("Successfully updated key:" + key + " with value:" + value);
-                } else {
-                    response.setStatus(KVMessage.StatusType.PUT_SUCCESS);
-                    logger.info("Successfully inserted key:" + key + " with value:" + value);
-                }
+			if (key != null
+					&& !key.equals("")
+					&& !key.contains(" ")
+					&& key.getBytes().length <= 20
+					&& value.getBytes().length <= (120 * 1024)){
+            	try {
+					cache.putKV(key, value);
+                	storage.writeToDisk(key, value);
+                	if (fileAlreadyExists){
+                	    response.setStatus(KVMessage.StatusType.PUT_UPDATE);
+                	    logger.info("Successfully updated key:" + key + " with value:" + value);
+                	} else {
+                	    response.setStatus(KVMessage.StatusType.PUT_SUCCESS);
+                	    logger.info("Successfully inserted key:" + key + " with value:" + value);
+                	}
 
-            } catch (FileNotFoundException e) {
-                logger.error("Somehow file could not be found");
-            } catch (UnsupportedEncodingException e) {
-                logger.error("Unsupported encoding");
-            }
+            	} catch (FileNotFoundException e) {
+                	logger.error("Somehow file could not be found");
+            	} catch (UnsupportedEncodingException e) {
+                	logger.error("Unsupported encoding");
+            	}
+			}
         }
         return response;
     }
@@ -179,9 +193,8 @@ public class KVServer extends Thread implements IKVServer {
 
     @Override
     public void clearStorage() {
+        storage.clearStorage();
 		clearCache();
-
-		// TODO write clear storage implementation
     }
 
     @Override
@@ -198,7 +211,9 @@ public class KVServer extends Thread implements IKVServer {
                     logger.info("Connected to "
                             + client.getInetAddress().getHostName()
                             + " on port " + client.getPort());
-                } catch (IOException e) {
+                } catch (SocketException se) {
+					logger.error("Error! socket exception");
+				} catch (IOException e) {
                     logger.error("Error! " +
                             "Unable to establish connection. \n", e);
                 }
@@ -282,7 +297,7 @@ public class KVServer extends Thread implements IKVServer {
      */
     public static void main(String[] args) {
         try {
-            new LogSetup("logs/server.log", Level.ALL);
+
             if (args.length != 3) {
                 System.out.println("Error! Invalid number of arguments!");
                 System.out.println("Usage: KVServer <port> <cahche size> <caching strategy>!");
@@ -294,10 +309,6 @@ public class KVServer extends Thread implements IKVServer {
 
                 new KVServer(port, cacheSize, strategy).start();
             }
-        } catch (IOException e) {
-            System.out.println("Error! Unable to initialize logger!");
-            e.printStackTrace();
-            System.exit(1);
         } catch (NumberFormatException nfe) {
             System.out.println("Error! Invalid argument <port> or <cache_size>! Not a number!");
             System.out.println("Usage: Server <port>!");

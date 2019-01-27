@@ -14,4 +14,6 @@ public interface IKVStorage {
     boolean deleteFile(String key);
 
     boolean checkIfFileExists(String key);
+
+	void clearStorage ();
 }

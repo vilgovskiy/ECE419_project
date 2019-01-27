@@ -3,8 +3,7 @@ package app_kvClient;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
+import org.apache.log4j.*;
 import logger.LogSetup;
 
 import java.io.IOException;
@@ -26,6 +25,16 @@ public class KVClient implements IKVClient, Runnable {
     
     private String serverAddr;
     private int serverPort;
+
+	public KVClient(){
+		try {
+			new LogSetup("logs/client.log", Level.ALL);
+		} catch (Exception e){
+			System.out.println("Error! Unable to initialize logger!");
+			e.printStackTrace();
+			System.exit(1);
+		}
+	}
 
     @Override
     public void run(){
@@ -151,9 +160,7 @@ public class KVClient implements IKVClient, Runnable {
 
     @Override
     public void newConnection(String hostname, int port) throws Exception {
-        if (store != null) {
-            throw new Exception("connection has already been established!");
-        }
+		System.out.println("connecting port " + port);
         store = new KVStore(hostname, port);
         store.connect();
     }
@@ -257,14 +264,7 @@ public class KVClient implements IKVClient, Runnable {
     }
     
     public static void main(String[] args) {
-    	try {
-			new LogSetup("logs/client.log", Level.OFF);
 			KVClient cli = new KVClient();
 			cli.run();
-		} catch (IOException e) {
-			System.out.println("Error! Unable to initialize logger!");
-			e.printStackTrace();
-			System.exit(1);
-		}
     }
 }

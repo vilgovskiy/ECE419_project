@@ -11,7 +11,8 @@ public final class ObjectFactory {
 	 */
     public static IKVClient createKVClientObject() {
         // TODO Auto-generated method stub
-    	return new KVClient();
+    	IKVClient kvClient = new KVClient();
+		return kvClient;
     }
     
     /*
@@ -19,6 +20,7 @@ public final class ObjectFactory {
      */
 	public static IKVServer createKVServerObject(int port, int cacheSize, String strategy) {
 		// TODO Auto-generated method stub
-		return new KVServer(port, cacheSize, strategy);
+		IKVServer kvServer = new KVServer(port, cacheSize, strategy);
+		return kvServer;
 	}
 }

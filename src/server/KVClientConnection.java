@@ -40,8 +40,10 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                 try {
                     TextMessage text = receiveMessage();
                     JsonMessage msg = new JsonMessage();
+					
                     msg.deserialize(text.getMsg());
                     JsonMessage response = processMsg(msg);
+					
                     TextMessage respText =new TextMessage(response.serialize());
                     sendMessage(respText);
 
@@ -51,7 +53,10 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                 } catch (IOException ioe) {
                     logger.error("Error! Connection lost!");
                     isOpen = false;
-                }
+                } catch (Exception e) {
+					logger.error("Error! Exception ");
+					isOpen = false;
+				}
             }
 
         } catch (IOException ioe) {
@@ -74,7 +79,6 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
     private JsonMessage processMsg(JsonMessage msg) {
         JsonMessage response = null;
         logger.info("Received message from " + clientSocket.getInetAddress());
-
         switch (msg.getStatus()) {
             case PUT:
                 logger.info("Put request for key:" + msg.getKey() + " value:" + msg.getValue());
