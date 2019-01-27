@@ -11,6 +11,7 @@ import shared.messages.JsonMessage;
 import shared.messages.KVMessage;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.SocketException;
@@ -26,6 +27,7 @@ public class KVServer extends Thread implements IKVServer {
     private int cacheSize;
     private CacheStrategy strategy;
     private boolean running;
+    private HashSet<KVClientConnection> connSet;
     private ServerSocket serverSocket;
     private IKVStorage storage;
 	private Cache cache;
@@ -192,6 +194,7 @@ public class KVServer extends Thread implements IKVServer {
 
     @Override
     public void run() {
+        connSet = new HashSet<>();
         running = initializeKVServer();
 
         if (serverSocket != null) {
@@ -199,6 +202,7 @@ public class KVServer extends Thread implements IKVServer {
                 try {
                     Socket client = serverSocket.accept();
                     KVClientConnection connection = new KVClientConnection(this, client);
+                    connSet.add(connection);
                     new Thread(connection).start();
 
                     logger.info("Connected to "
@@ -214,6 +218,9 @@ public class KVServer extends Thread implements IKVServer {
                 }
             }
             logger.info("Server is stopped");
+        }
+        for (KVClientConnection connection : connSet) {
+            connection.disconnect();
         }
     }
 
