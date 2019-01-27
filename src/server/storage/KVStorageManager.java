@@ -68,7 +68,7 @@ public class KVStorageManager {
     // method that creates a new KVStorage and append to list
     private synchronized void createNewKVStorage() {
         int currIndex = kvStorageInfoList.size();
-        KVStorage newStorage = new KVStorage(storageDir + currIndex);
+        KVStorage newStorage = new KVStorage(storageDir + currIndex, currIndex);
         KVStorageInfo storageInfo = new KVStorageInfo(newStorage);
         kvStorageInfoList.add(storageInfo);
         latestKVStorage = newStorage;
@@ -97,8 +97,22 @@ public class KVStorageManager {
 
 
     public KVData get(String key) throws IOException {
-        //
-        return new KVData();
+        int threadCount = kvStorageInfoList.size();
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        for (KVStorageInfo storageInfo : kvStorageInfoList) {
+            Runnable reader = new StorageReader(storageInfo.kvStorage);
+            executor.execute(reader);
+        }
+        executor.shutdown();
+        while (!executor.isTerminated()) {
+        }
+
+        ReadResult getResult = StorageReader.getFinalReadResult();
+        KVData finalFoundEntry = new KVData();
+        finalFoundEntry.setKey(key);
+        finalFoundEntry.setValue(getResult.foundValue);
+        finalFoundEntry.setOffset(getResult.foundOffset);
+        return finalFoundEntry;
     }
 
     // get the value from index if key exists in cache, calls readFromIndex in KVStorage instance

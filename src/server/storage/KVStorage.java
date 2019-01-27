@@ -98,7 +98,6 @@ public class KVStorage implements IKVStorage {
                 String value = new String(valueBytes, Charset.forName("UTF-8"));
                 foundEntry.setKey(key);
                 foundEntry.setValue(value);
-                long newOffset 
                 found = true;
                 break;
             }

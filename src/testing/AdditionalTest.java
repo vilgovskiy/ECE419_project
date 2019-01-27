@@ -25,15 +25,17 @@ public class AdditionalTest extends TestCase {
 
     @Test
     public void testKVStorageManager() {
-
         KVStorageManager manager = KVStorageManager.getInstance();
-        List<KVData> dataList = new ArrayList<>();
+        List<KVData> firstDataList = new ArrayList<>();
+        List<KVData> secondDataList = new ArrayList<>();
+        List<KVData> lastDataList = new ArrayList<>();
         List<Long> indexList = new ArrayList<>();
 
-        dataList.add(new KVData("key1", "value1"));
-        dataList.add(new KVData("key2", "value2"));
-        dataList.add(new KVData("object", "storageValue"));
-        dataList.add(new KVData("hello", "world"));
+        for (int i = 0 ; i < 10000; i++) {
+            firstDataList.add(new KVData("key"+i, "value"+1));
+        }
+
+
 
         for (KVData data : dataList) {
             try {
@@ -43,9 +45,15 @@ public class AdditionalTest extends TestCase {
             }
         }
 
-        System.out.println(indexList);
-        File dataFile = new File("data/0");
-        dataFile.delete();
+        for (KVData data : dataList) {
+            try {
+                KVData foundEntry = manager.get(data.getKey());
+                assert(foundEntry.getValue().equals(data.getValue()));
+                assert(foundEntry.getKey().equals(data.getKey()));
+            } catch (Exception e) {
+                System.out.println("EXCEIOTN!");
+            }
+        }
     }
 
     /*@Test

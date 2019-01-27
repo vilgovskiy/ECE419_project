@@ -24,3 +24,11 @@
 2019-01-26 19:34:51,557 INFO  [main] root: storage file data/0 created
 2019-01-26 19:43:55,715 INFO  [main] root: creating storage directory ...
 2019-01-26 19:43:55,721 INFO  [main] root: storage file data/0 created
+2019-01-26 22:39:28,870 INFO  [main] root: writing entry {key: key1, value: value1}
+2019-01-26 22:39:28,874 INFO  [main] root: writing entry {key: key2, value: value2}
+2019-01-26 22:39:28,875 INFO  [main] root: writing entry {key: object, value: storageValue}
+2019-01-26 22:39:28,875 INFO  [main] root: writing entry {key: hello, value: world}
+2019-01-26 22:39:40,235 ERROR [pool-1-thread-1] root: IO Exception during read
+2019-01-26 22:39:40,237 ERROR [pool-2-thread-1] root: IO Exception during read
+2019-01-26 22:39:40,238 ERROR [pool-3-thread-1] root: IO Exception during read
+2019-01-26 22:39:40,240 ERROR [pool-4-thread-1] root: IO Exception during read
