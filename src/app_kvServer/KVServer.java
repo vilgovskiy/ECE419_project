@@ -49,7 +49,7 @@ public class KVServer extends Thread implements IKVServer {
         this.strategy = CacheStrategy.valueOf(strategy);
         if (storage == null ) storage = KVStorage.getInstance();
 
-		switch (this.strategy) {
+        switch (this.strategy) {
 			case FIFO:
 				cache = new FIFOCache(cacheSize);
 				break;
@@ -186,8 +186,8 @@ public class KVServer extends Thread implements IKVServer {
 
     @Override
     public void clearStorage() {
+        clearCache();
         storage.clearStorage();
-		clearCache();
     }
 
     @Override
