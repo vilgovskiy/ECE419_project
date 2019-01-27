@@ -81,12 +81,12 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
         logger.info("Received message from " + clientSocket.getInetAddress());
         switch (msg.getStatus()) {
             case PUT:
-                logger.info("Put request for key:" + msg.getKey() + " value:" + msg.getValue());
+                logger.info("Put request for key: " + msg.getKey() + " value: " + msg.getValue());
                 response = kvServer.putKV(msg.getKey(), msg.getValue());
                 break;
 
             case GET:
-                logger.info("Put request for key:" + msg.getKey() + " value:" + msg.getValue());
+                logger.info("Put request for key: " + msg.getKey() + " value: " + msg.getValue());
                 response = kvServer.getKV(msg.getKey());
                 break;
             default:

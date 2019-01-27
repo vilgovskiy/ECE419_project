@@ -10,6 +10,8 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
     private String value;
 
     public JsonMessage() {
+        this.key = "";
+        this.value = "";
     }
 
     public JsonMessage(StatusType status, String key, String value) {

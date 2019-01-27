@@ -2,17 +2,15 @@ package app_kvServer;
 
 
 import logger.LogSetup;
-import org.apache.log4j.*;
+import org.apache.log4j.Logger;
+import org.apache.log4j.Level;
 import server.cache.*;
-import server.IKVStorage;
+import server.storage.*;
 import server.KVClientConnection;
-import server.KVStorage;
 import shared.messages.JsonMessage;
 import shared.messages.KVMessage;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.SocketException;
@@ -21,6 +19,8 @@ import java.net.Socket;
 public class KVServer extends Thread implements IKVServer {
 
     private static Logger logger = Logger.getRootLogger();
+    private static final int maxKeyLength = 20;
+    private static final int maxValueLength = 120 * 1024;
 
     private int port;
     private int cacheSize;
@@ -29,6 +29,7 @@ public class KVServer extends Thread implements IKVServer {
     private ServerSocket serverSocket;
     private IKVStorage storage;
 	private Cache cache;
+
 
     /**
      * Start KV Server at given port
@@ -46,7 +47,7 @@ public class KVServer extends Thread implements IKVServer {
         this.port = port;
         this.cacheSize = cacheSize;
         this.strategy = CacheStrategy.valueOf(strategy);
-        storage = new KVStorage();
+        storage = KVStorage.getInstance();
 
 		switch (this.strategy) {
 			case FIFO:
@@ -96,7 +97,13 @@ public class KVServer extends Thread implements IKVServer {
 
     @Override
     public boolean inStorage(String key) {
-        return storage.checkIfFileExists(key);
+        try {
+            KVData entry = storage.read(key);
+            return !entry.getValue().equals("");
+        } catch (Exception e) {
+            logger.error("IO Exception during searching key " + key + " in storage", e);
+        }
+        return false;
     }
 
     @Override
@@ -108,82 +115,77 @@ public class KVServer extends Thread implements IKVServer {
     public JsonMessage getKV(String key)  {
         JsonMessage responseMsg = new JsonMessage();
         responseMsg.setKey(key);
-		String value;
 
-        try {
-			if (cache.inCache(key)) {
-				// first check the cache
-				value = cache.getKV(key);
-			} else {
-				// retrieve value from storage
-				value = storage.getFileContents(key);
-
-				// place the value in the cache
-				cache.putKV(key, value);
-			}
-
-            responseMsg.setValue(value);
+		if (cache.inCache(key)) {
             responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
-            logger.info("Succesfully retrieved value for key:" + key);
-        } catch (FileNotFoundException e) {
-            responseMsg.setStatus(KVMessage.StatusType.GET_ERROR);
-            logger.info("Could not retrieve value for key:" + key + ". File doesnt exist");
-        }
-
+		    responseMsg.setValue(cache.getKV(key));
+		} else {
+		    if (inStorage(key)) {
+                try {
+                    KVData foundEntry = storage.read(key);
+                    String value = foundEntry.getValue();
+                    responseMsg.setValue(value);
+                    responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
+                    cache.putKV(key, value);
+                    logger.info("GET_SUCCESS for key:" + key + ", value: " + foundEntry.getValue());
+                } catch (Exception e) {
+                    logger.error("error while reading key" + key + " from storage", e);
+                    responseMsg.setStatus(KVMessage.StatusType.GET_ERROR);
+                }
+            } else {
+		        responseMsg.setStatus(KVMessage.StatusType.GET_ERROR);
+            }
+		}
         return responseMsg;
     }
 
     @Override
     public JsonMessage putKV(String key, String value) {
-        boolean fileAlreadyExists = inStorage(key);
-        JsonMessage response = new JsonMessage();
-        response.setKey(key);
-        response.setValue(value);
-		logger.info(key + "=================================================================" + value);
-
+        boolean entryExists = inStorage(key);
+        JsonMessage responseMsg = new JsonMessage();
+        responseMsg.setKey(key);
+        responseMsg.setValue(value);
 
         if (value.isEmpty()) {
-            logger.info("Delete KV with key: " + key);
+            logger.info("Deleting entry with key: " + key);
 
 			if (cache.inCache(key)) {
-				// Delete KV pair from cache
 				cache.putKV(key, null);
 			}
 
-            if (fileAlreadyExists) {
-                storage.deleteFile(key);
-                logger.info("Successfully deleted KV with key:" + key);
-                response.setStatus(KVMessage.StatusType.DELETE_SUCCESS);
+            if (entryExists) {
+                try {
+                    storage.write(new KVData(key, ""));
+                    logger.info("Successfully deleted KV with key:" + key);
+                    responseMsg.setStatus(KVMessage.StatusType.DELETE_SUCCESS);
+                } catch (Exception e) {
+                    responseMsg.setStatus(KVMessage.StatusType.DELETE_ERROR);
+                    logger.warn("Unable to delete key: " + key, e);
+                }
             } else {
-                response.setStatus(KVMessage.StatusType.DELETE_ERROR);
-                logger.info("Unable to delete key:" + key + ". File doesn't exist!");
+                responseMsg.setStatus(KVMessage.StatusType.DELETE_ERROR);
+                logger.warn("Unable to delete key:" + key + " doesn't exist!");
             }
         } else {
-            response.setStatus(KVMessage.StatusType.PUT_ERROR);
-			if (key != null
-					&& !key.equals("")
-					&& !key.contains(" ")
-					&& key.getBytes().length <= 20
-					&& value.getBytes().length <= (120 * 1024)){
+			if (checkValidKeyValue(key, value)){
             	try {
+            	    storage.write(new KVData(key, value));
 					cache.putKV(key, value);
-                	storage.writeToDisk(key, value);
-                	if (fileAlreadyExists){
-                	    response.setStatus(KVMessage.StatusType.PUT_UPDATE);
-                	    logger.info("Successfully updated key:" + key + " with value:" + value);
-                	} else {
-                	    response.setStatus(KVMessage.StatusType.PUT_SUCCESS);
-                	    logger.info("Successfully inserted key:" + key + " with value:" + value);
-                	}
 
-            	} catch (FileNotFoundException e) {
-                	logger.error("Somehow file could not be found");
-            	} catch (UnsupportedEncodingException e) {
-                	logger.error("Unsupported encoding");
-            	}
+					if (entryExists) {
+                        responseMsg.setStatus(KVMessage.StatusType.PUT_UPDATE);
+                        logger.info("Successfully updated {key:" + key + ", value:" + value + "}");
+                    } else {
+                        responseMsg.setStatus(KVMessage.StatusType.PUT_SUCCESS);
+                        logger.info("Successfully inserted {key: " + key + ", value:" + value + "}");
+                    }
+            	} catch (Exception e) {
+            	    logger.error("Unable to put {key: " + key + ", value: " + value + "} in storage", e);
+            	    responseMsg.setStatus(KVMessage.StatusType.PUT_ERROR);
+                }
 			}
         }
-        return response;
+        return responseMsg;
     }
 
     @Override
@@ -251,6 +253,12 @@ public class KVServer extends Thread implements IKVServer {
             }
             return false;
         }
+    }
+
+    private boolean checkValidKeyValue(String key, String value) {
+        if (key == null || key.equals("") || key.contains(" ") || key.getBytes().length > maxKeyLength
+                || value.getBytes().length > maxValueLength) return false;
+        else return true;
     }
 
     private boolean isRunning() {

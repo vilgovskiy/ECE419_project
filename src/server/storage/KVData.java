@@ -4,21 +4,25 @@ import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 public class KVData {
-    static final String encoding = "UTF-8";
+    private static final String encoding = "UTF-8";
 
     int keySize;
     int valueSize;
     private String key;
     private String value;
-    private long offset;
 
-    public KVData() {}
+    public KVData() {
+        this.keySize = 0;
+        this.valueSize = 0;
+        this.key = "";
+        this.value = "";
+    }
 
     public KVData(String key, String value) {
         this.key = key;
         this.value = value;
-        this.keySize = key.getBytes(Charset.forName("UTF-8")).length;
-        this.valueSize = value.getBytes(Charset.forName("UTF-8")).length;
+        this.keySize = key.getBytes(Charset.forName(encoding)).length;
+        this.valueSize = value.getBytes(Charset.forName(encoding)).length;
     }
 
     public String getKey() {
@@ -29,8 +33,6 @@ public class KVData {
         return value;
     }
 
-    public long getOffset() { return offset; }
-
     public void setKey(String key) {
         this.key = key;
         this.keySize = key.getBytes().length;
@@ -39,10 +41,6 @@ public class KVData {
     public void setValue(String value) {
         this.value = value;
         this.valueSize = value.getBytes().length;
-    }
-
-    public void setOffset(long offset) {
-        this.offset = offset;
     }
 
     // return the unit size of the data entry in byte size
@@ -55,8 +53,8 @@ public class KVData {
         // create byte arrays of keySize, valueSize, key, value fields
         byte[] keySizeBytes = ByteBuffer.allocate(4).putInt(keySize).array();
         byte[] valueSizeBytes = ByteBuffer.allocate(4).putInt(valueSize).array();
-        byte[] keyBytes = key.getBytes(Charset.forName("UTF-8"));
-        byte[] valueBytes = value.getBytes(Charset.forName("UTF-8"));
+        byte[] keyBytes = key.getBytes(Charset.forName(encoding));
+        byte[] valueBytes = value.getBytes(Charset.forName(encoding));
 
         // create new byte array with this KVData's unit size
         byte[] byteArray = new byte[this.getDataSize()];
