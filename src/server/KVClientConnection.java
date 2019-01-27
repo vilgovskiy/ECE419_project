@@ -67,9 +67,15 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
         } catch (IOException ioe) {
             logger.error("Error! Connection could not be established!", ioe);
         } finally {
-            if (clientSocket != null) {
-                disconnect();
-                clientSocket = null;
+            try {
+                if (clientSocket != null) {
+                    input.close();
+                    output.close();
+                    clientSocket.close();
+                    clientSocket = null;
+                }
+            } catch (IOException ioe) {
+                logger.error("Error! Unable to tear down connection!", ioe);
             }
         }
     }
@@ -90,15 +96,5 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
             default:
         }
         return response;
-    }
-
-    public void disconnect() {
-        try {
-            input.close();
-            output.close();
-            clientSocket.close();
-        } catch (IOException ioe) {
-            logger.error("Error! Unable to tear down connection!", ioe);
-        }
     }
 }
