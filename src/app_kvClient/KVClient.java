@@ -23,7 +23,7 @@ public class KVClient implements IKVClient, Runnable {
     private BufferedReader stdin;
     private KVStore store = null;
     private boolean stop = false;
-    
+
     private String serverAddr;
     private int serverPort;
 
@@ -97,15 +97,15 @@ public class KVClient implements IKVClient, Runnable {
                     printError("Invalid number of parameters!");
                 }
                 break;
-            
+
             case "put":
                 if (token.length == 2 || token.length == 3) {
                     if (store != null && store.isRunning()){
                         try {
                             // delete
-                            KVMessage resp; 
+                            KVMessage resp;
                             if (token.length == 2) resp = store.put(token[1], "");
-                            // put or update
+                                // put or update
                             else resp = store.put(token[1], token[2]);
                             printKVMessage(resp);
                         } catch (Exception e) {
@@ -120,19 +120,19 @@ public class KVClient implements IKVClient, Runnable {
 
             case "logLevel":
                 if(token.length == 2) {
-			    	String level = setLevel(token[1]);
-			    	if(level.equals(LogSetup.UNKNOWN_LEVEL)) {
-			    		printError("No valid log level!");
-			    		printPossibleLogLevels();
-			    	} else {
-			    		System.out.println(PROMPT + 
-			    				"Log level changed to level " + level);
-			    	}
-			    } else {
-			    	printError("Invalid number of parameters!");
-			    }
+                    String level = setLevel(token[1]);
+                    if(level.equals(LogSetup.UNKNOWN_LEVEL)) {
+                        printError("No valid log level!");
+                        printPossibleLogLevels();
+                    } else {
+                        System.out.println(PROMPT +
+                                "Log level changed to level " + level);
+                    }
+                } else {
+                    printError("Invalid number of parameters!");
+                }
                 break;
-            
+
             case "help":
                 printHelp();
                 break;
@@ -142,8 +142,8 @@ public class KVClient implements IKVClient, Runnable {
                 closeConnection();
                 System.out.println(PROMPT + "Client Application exit!");
                 break;
-            
-            default: 
+
+            default:
                 printError("Unknown command");
                 printHelp();
         }
@@ -152,10 +152,11 @@ public class KVClient implements IKVClient, Runnable {
     @Override
     public void newConnection(String hostname, int port) throws Exception {
         if (store != null) {
-            throw new Exception("connection has already been established!");
+            printStatus("connection has already been established at " + store.getAddress() + ":" + store.getPort() + "!");
+        } else {
+            store = new KVStore(hostname, port);
+            store.connect();
         }
-        store = new KVStore(hostname, port);
-        store.connect();
     }
 
     private void closeConnection() {
@@ -169,69 +170,69 @@ public class KVClient implements IKVClient, Runnable {
     public KVCommInterface getStore(){
         return store;
     }
-    
+
     private void printHelp() {
-		StringBuilder sb = new StringBuilder();
-		sb.append(PROMPT).append("KV CLIENT HELP (Usage):\n");
-		sb.append(PROMPT);
-		sb.append("::::::::::::::::::::::::::::::::");
-		sb.append("::::::::::::::::::::::::::::::::\n");
-		sb.append(PROMPT).append("connect <host> <port>");
-		sb.append("\t establishes a connection to a server\n");
-		sb.append(PROMPT).append("get <key>");
-		sb.append("\t\t Retrieves the value for the given key from the storage server\n");
+        StringBuilder sb = new StringBuilder();
+        sb.append(PROMPT).append("KV CLIENT HELP (Usage):\n");
+        sb.append(PROMPT);
+        sb.append("::::::::::::::::::::::::::::::::");
+        sb.append("::::::::::::::::::::::::::::::::\n");
+        sb.append(PROMPT).append("connect <host> <port>");
+        sb.append("\t establishes a connection to a server\n");
+        sb.append(PROMPT).append("get <key>");
+        sb.append("\t\t Retrieves the value for the given key from the storage server\n");
         sb.append(PROMPT).append("put <key> <value>");
-		sb.append("\t\t\t inserts/updates a key-value pair into the storage server, if no value ");
+        sb.append("\t\t\t inserts/updates a key-value pair into the storage server, if no value ");
         sb.append("is provided, the entry is deleted\n");
         sb.append(PROMPT).append("disconnect");
-		sb.append("\t\t\t disconnects from the server \n");
-		
-		sb.append(PROMPT).append("logLevel");
-		sb.append("\t\t\t changes the logLevel \n");
-		sb.append(PROMPT).append("\t\t\t\t ");
-		sb.append("ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \n");
-		
-		sb.append(PROMPT).append("quit ");
-		sb.append("\t\t\t exits the program");
-		System.out.println(sb.toString());
-	}
+        sb.append("\t\t\t disconnects from the server \n");
+
+        sb.append(PROMPT).append("logLevel");
+        sb.append("\t\t\t changes the logLevel \n");
+        sb.append(PROMPT).append("\t\t\t\t ");
+        sb.append("ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF \n");
+
+        sb.append(PROMPT).append("quit ");
+        sb.append("\t\t\t exits the program");
+        System.out.println(sb.toString());
+    }
 
     private void printPossibleLogLevels() {
-		System.out.println(PROMPT 
-				+ "Possible log levels are:");
-		System.out.println(PROMPT 
-				+ "ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF");
-	}
+        System.out.println(PROMPT
+                + "Possible log levels are:");
+        System.out.println(PROMPT
+                + "ALL | DEBUG | INFO | WARN | ERROR | FATAL | OFF");
+    }
 
     private String setLevel(String levelString) {
-		if(levelString.equals(Level.ALL.toString())) {
-			logger.setLevel(Level.ALL);
-			return Level.ALL.toString();
-		} else if(levelString.equals(Level.DEBUG.toString())) {
-			logger.setLevel(Level.DEBUG);
-			return Level.DEBUG.toString();
-		} else if(levelString.equals(Level.INFO.toString())) {
-			logger.setLevel(Level.INFO);
-			return Level.INFO.toString();
-		} else if(levelString.equals(Level.WARN.toString())) {
-			logger.setLevel(Level.WARN);
-			return Level.WARN.toString();
-		} else if(levelString.equals(Level.ERROR.toString())) {
-			logger.setLevel(Level.ERROR);
-			return Level.ERROR.toString();
-		} else if(levelString.equals(Level.FATAL.toString())) {
-			logger.setLevel(Level.FATAL);
-			return Level.FATAL.toString();
-		} else if(levelString.equals(Level.OFF.toString())) {
-			logger.setLevel(Level.OFF);
-			return Level.OFF.toString();
-		} else {
-			return LogSetup.UNKNOWN_LEVEL;
-		}
-	}
+        if(levelString.equals(Level.ALL.toString())) {
+            logger.setLevel(Level.ALL);
+            return Level.ALL.toString();
+        } else if(levelString.equals(Level.DEBUG.toString())) {
+            logger.setLevel(Level.DEBUG);
+            return Level.DEBUG.toString();
+        } else if(levelString.equals(Level.INFO.toString())) {
+            logger.setLevel(Level.INFO);
+            return Level.INFO.toString();
+        } else if(levelString.equals(Level.WARN.toString())) {
+            logger.setLevel(Level.WARN);
+            return Level.WARN.toString();
+        } else if(levelString.equals(Level.ERROR.toString())) {
+            logger.setLevel(Level.ERROR);
+            return Level.ERROR.toString();
+        } else if(levelString.equals(Level.FATAL.toString())) {
+            logger.setLevel(Level.FATAL);
+            return Level.FATAL.toString();
+        } else if(levelString.equals(Level.OFF.toString())) {
+            logger.setLevel(Level.OFF);
+            return Level.OFF.toString();
+        } else {
+            return LogSetup.UNKNOWN_LEVEL;
+        }
+    }
 
     private void printError(String error){
-		System.out.println(PROMPT + "Error! " +  error);
+        System.out.println(PROMPT + "Error! " +  error);
     }
 
     private void printStatus(String status){
@@ -241,10 +242,10 @@ public class KVClient implements IKVClient, Runnable {
     private void printKVMessage(KVMessage msg) {
         if (msg.getValue().equals("")) {
             System.out.println(msg.getStatus() + " <" +
-            msg.getKey() + ">"); 
+                    msg.getKey() + ">");
         } else {
             System.out.println(msg.getStatus() + " <" +
-            msg.getKey() + ", " + msg.getValue() + ">");
+                    msg.getKey() + ", " + msg.getValue() + ">");
         }
     }
 
@@ -255,16 +256,16 @@ public class KVClient implements IKVClient, Runnable {
     public int getServerPort() {
         return serverPort;
     }
-    
+
     public static void main(String[] args) {
-    	try {
-			new LogSetup("logs/client.log", Level.OFF);
-			KVClient cli = new KVClient();
-			cli.run();
-		} catch (IOException e) {
-			System.out.println("Error! Unable to initialize logger!");
-			e.printStackTrace();
-			System.exit(1);
-		}
+        try {
+            new LogSetup("logs/client.log", Level.ALL);
+            KVClient cli = new KVClient();
+            cli.run();
+        } catch (IOException e) {
+            System.out.println("Error! Unable to initialize logger!");
+            e.printStackTrace();
+            System.exit(1);
+        }
     }
 }

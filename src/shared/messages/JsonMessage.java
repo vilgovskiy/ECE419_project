@@ -10,6 +10,8 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
     private String value;
 
     public JsonMessage() {
+        this.key = "";
+        this.value = "";
     }
 
     public JsonMessage(StatusType status, String key, String value) {
@@ -56,10 +58,10 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
 
     @Override
     public void deserialize(String jsonData) {
-        JsonMessage json = new Gson().fromJson(jsonData, this.getClass());
-        this.status = json.status;
-        this.key = json.key;
-        this.value = json.value;
+			JsonMessage json = new Gson().fromJson(jsonData, this.getClass());
+			this.status = json.status;
+        	this.key = json.key;
+        	this.value = json.value;
     }
 
     @Override
