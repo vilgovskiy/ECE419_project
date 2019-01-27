@@ -10,10 +10,12 @@ import org.apache.log4j.Logger;
 import logger.LogSetup;
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 
 public class AdditionalTest extends TestCase {
+    private static Logger logger = Logger.getRootLogger();
 
     static {
         try {
@@ -24,81 +26,72 @@ public class AdditionalTest extends TestCase {
     }
 
     @Test
-    public void testKVStorageManager() {
-        KVStorageManager manager = KVStorageManager.getInstance();
-        List<KVData> firstDataList = new ArrayList<>();
-        List<KVData> secondDataList = new ArrayList<>();
-        List<KVData> lastDataList = new ArrayList<>();
-        List<Long> indexList = new ArrayList<>();
-
-        for (int i = 0 ; i < 10000; i++) {
-            firstDataList.add(new KVData("key"+i, "value"+1));
-        }
-
-
-
-        for (KVData data : dataList) {
-            try {
-                indexList.add(manager.put(data));
-            } catch (IOException e) {
-                System.out.println("IO Exception during write!");
-            }
-        }
-
-        for (KVData data : dataList) {
-            try {
-                KVData foundEntry = manager.get(data.getKey());
-                assert(foundEntry.getValue().equals(data.getValue()));
-                assert(foundEntry.getKey().equals(data.getKey()));
-            } catch (Exception e) {
-                System.out.println("EXCEIOTN!");
-            }
-        }
-    }
-
-    /*@Test
     public void testKVStorage() {
-
-        KVStorage storage = new KVStorage("one");
-        File storageFile = new File("/Users/brucechenchen/github/ECE419_project/one.db");
+        KVStorage storage = KVStorage.getInstance();
+        File storageFile = new File("data");
         assert(storageFile.exists());
 
         List<KVData> dataList = new ArrayList<>();
-        List<Long> indexList = new ArrayList<>();
-        dataList.add(new KVData("key1", "value1"));
-        dataList.add(new KVData("key2", "value2"));
-        dataList.add(new KVData("object", "storageValue"));
-        dataList.add(new KVData("hello", "world"));
+        List<KVData> updateDataList = new ArrayList<>();
+        List<KVData> readDataList = new ArrayList<>();
+        HashMap<String, Long> indexMap = new HashMap<>();
 
+        for (int i = 1; i <= 20; i++) {
+            String key = "key-" + i;
+            String value = "value-" + i;
+            KVData entry = new KVData(key, value);
+            dataList.add(entry);
 
-        for (KVData data : dataList) {
+            if (i%4 == 0) {
+                KVData updateEntry = new KVData(key, "updateValue-"+i);
+                updateDataList.add(updateEntry);
+                readDataList.add(updateEntry);
+            } else {
+                readDataList.add(entry);
+            }
+        }
+
+        for (KVData entry : dataList) {
             try {
-                indexList.add(storage.write(data));
+                long offset = storage.write(entry);
+                indexMap.put(entry.getKey(), offset);
             } catch (IOException e) {
-                System.out.println("IO Exception during write!");
+                logger.error("io exception during write", e);
             }
         }
 
-        for (KVData data : dataList) {
+        for (KVData updatedEntry : updateDataList) {
             try {
-                KVData foundEntry = storage.read(data.getKey());
-                assert(foundEntry.getKey().equals(data.getKey()));
-                assert(foundEntry.getValue().equals(data.getValue()));
-            } catch(IOException e) {
-                System.out.println("IO Exception during read!");
+                long offset = storage.write(updatedEntry);
+                indexMap.put(updatedEntry.getKey(), offset);
+            } catch (IOException e) {
+                logger.error("io exception during updated write", e);
             }
         }
 
-        int i = 0;
-        for (long index : indexList) {
+        for (KVData readEntry : readDataList) {
             try {
-                KVData foundEntry = storage.readFromIndex(dataList.get(i).getKey(), index);
-                assert(foundEntry.getKey().equals(dataList.get(i).getKey()));
-                assert(foundEntry.getValue().equals(dataList.get(i).getValue()));
-                i++;
-            } catch (Exception e) {
-                System.out.println("Exception during read from index!");
+                KVData foundEntry = storage.read(readEntry.getKey());
+                assert(foundEntry.getKey().equals(readEntry.getKey()));
+                assert(foundEntry.getValue().equals(readEntry.getValue()));
+            } catch (IOException e) {
+                logger.error("io exception during read", e);
             }
         }
-    }*/
+
+        for (int i = 1; i <= 20; i++) {
+            String key = "key-"+i;
+            String value = "value-"+i;
+            if (i%4==0) value = "updateValue-"+i;
+            long offset = indexMap.get(key);
+            try {
+                KVData foundEntry = storage.readFromIndex(key, offset);
+                assert(foundEntry.getKey().equals(key));
+                assert(foundEntry.getValue().equals(value));
+            } catch (IOException e) {
+                logger.error("io exception during readFromIndex", e);
+            }
+        }
+        storageFile.delete();
+    }
 }

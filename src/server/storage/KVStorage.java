@@ -10,32 +10,28 @@ import java.nio.charset.Charset;
 
 public class KVStorage implements IKVStorage {
     private static Logger logger = Logger.getRootLogger();
+    private static KVStorage storageInstance = null;
 
     private String storageFilePath;
-    private int storageFileIndex;
     private long currLength;
-    public long previousFilesOffset;
 
-    // Constructor that initialize KVStorage instance with new file
-    public KVStorage(String filePath, int fileIndex, long previousFilesOffset) {
+    private KVStorage(String filePath) {
         this.storageFilePath = filePath;
-        this.storageFileIndex = fileIndex;
-        this.previousFilesOffset = previousFilesOffset;
         openStorageFile();
         this.currLength = 0;
     }
 
-    // Constructor that initialize KVStorage instance with existing file
-    public KVStorage(String filePath, long currLength) {
-        this.storageFilePath = filePath;
-        this.currLength = currLength;
+    public static KVStorage getInstance() {
+        if (storageInstance == null) {
+            storageInstance = new KVStorage("data");
+        }
+        return storageInstance;
     }
 
     private void openStorageFile() {
         File storageFile = new File(storageFilePath);
         if (!storageFile.exists()) {
             try {
-
                 boolean createFile = storageFile.createNewFile();
                 if (!createFile) logger.info("storage file " + storageFilePath + " exists already");
                 else logger.info("storage file " + storageFilePath + " created");
@@ -53,23 +49,19 @@ public class KVStorage implements IKVStorage {
         return storageFilePath;
     }
 
-    public int getStorageFileIndex() {
-        return storageFileIndex;
-    }
-
     @Override
-    public synchronized long write(KVData kvData) throws IOException {
+    public synchronized long write(KVData kvData) throws Exception {
         RandomAccessFile raf = new RandomAccessFile(storageFilePath, "rw");
         raf.seek(raf.length());
         raf.write(kvData.toByteArray());
         currLength = raf.length();
         raf.close();
-        return previousFilesOffset + currLength;
+        return currLength;
     }
 
-    // read the entire file to find the key
+
     @Override
-    public KVData read(String key) throws IOException {
+    public KVData read(String key) throws Exception {
         KVData foundEntry = new KVData();
         boolean found = false;
         RandomAccessFile raf = new RandomAccessFile( storageFilePath, "r");
@@ -98,6 +90,7 @@ public class KVStorage implements IKVStorage {
                 String value = new String(valueBytes, Charset.forName("UTF-8"));
                 foundEntry.setKey(key);
                 foundEntry.setValue(value);
+                foundEntry.setOffset(currOffset + keySize + valueSize + 8);
                 found = true;
                 break;
             }
@@ -108,7 +101,7 @@ public class KVStorage implements IKVStorage {
 
     // Directly read the file from index using seek, can only be called by get in cache operation
     @Override
-    public KVData readFromIndex(String key, long index) throws IOException {
+    public KVData readFromIndex(String key, long index) throws Exception {
         KVData foundEntry = new KVData();
         boolean found = false;
         byte[] keySizeBytes = new byte[4];
@@ -135,6 +128,7 @@ public class KVStorage implements IKVStorage {
             String value = new String(valueBytes, Charset.forName("UTF-8"));
             foundEntry.setKey(key);
             foundEntry.setValue(value);
+            foundEntry.setOffset(index);
             found = true;
         } else {
             logger.error("cannot find key " + key + " from index");

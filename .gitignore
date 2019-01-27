@@ -5,5 +5,5 @@ data/
 ECE419_project.iml
 *.jar
 *.MF
-data/
+data
 bin/
