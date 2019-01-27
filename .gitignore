@@ -1,5 +1,11 @@
 .DS_STORE
 .idea/
 out/
-storage/
+data/
 ECE419_project.iml
+*.jar
+*.MF
+data
+bin/
+logs/
+
