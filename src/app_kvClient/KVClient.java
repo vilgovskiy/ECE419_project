@@ -160,11 +160,6 @@ public class KVClient implements IKVClient, Runnable {
 
     @Override
     public void newConnection(String hostname, int port) throws Exception {
-<<<<<<< HEAD
-		System.out.println("connecting port " + port);
-        store = new KVStore(hostname, port);
-        store.connect();
-=======
         if (store != null) {
             logger.warn("connection has already been established at " + store.getAddress() + ":" + store.getPort());
         }
@@ -173,7 +168,6 @@ public class KVClient implements IKVClient, Runnable {
             store = new KVStore(hostname, port);
             store.connect();
         }
->>>>>>> single_storage
     }
 
     private void closeConnection() {

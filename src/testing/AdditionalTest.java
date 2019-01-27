@@ -3,16 +3,6 @@ package testing;
 import org.junit.Test;
 
 import junit.framework.TestCase;
-<<<<<<< HEAD
-import server.KVStorage;
-
-import java.io.FileNotFoundException;
-import java.io.UnsupportedEncodingException;
-
-import client.KVStore;
-import shared.messages.JsonMessage;
-import shared.messages.KVMessage;
-=======
 import server.storage.*;
 
 import org.apache.log4j.Level;
@@ -23,90 +13,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
->>>>>>> single_storage
 
 public class AdditionalTest extends TestCase {
     private static Logger logger = Logger.getRootLogger();
 
-<<<<<<< HEAD
-    // TODO add your test cases, at least 3
-
-    @Test
-    public void testStub() {
-        assertTrue(true);
-    }
-
-    @Test
-    public void testFileRead() {
-
-    }
-
-    @Test
-    public void testFileCreate() {
-        KVStorage store = new KVStorage();
-        try {
-            store.writeToDisk("testWrite", "Attempt to write a text file to store directory.");
-        } catch (FileNotFoundException fnfe) {
-            assertTrue(false);
-        } catch (UnsupportedEncodingException uee) {
-            assertTrue(false);
-        }
-        store.deleteFile("testWrite");
-    }
-
-    @Test
-    public void testGetFileContents() {
-        KVStorage store = new KVStorage();
-        try {
-            store.writeToDisk("read_file_test", "Testing weather KVStore can read the file");
-        } catch (FileNotFoundException fnfe) {
-            assertTrue(false);
-        } catch (UnsupportedEncodingException uee) {
-            assertTrue(false);
-        }
-
-        String funcOut = "";
-        try {
-            funcOut = store.getFileContents("read_file_test");
-        } catch (FileNotFoundException e) {
-            assertTrue(false);
-        }
-        store.deleteFile("read_file_test");
-        assertEquals("Testing weather KVStore can read the file", funcOut);
-
-    }
-
-    @Test
-    public void testGetFileContentsNonExistingFile() {
-        KVStorage store = new KVStorage();
-
-        FileNotFoundException ex = null;
-        try {
-            store.getFileContents("someFile");
-        } catch (FileNotFoundException e) {
-            ex = e;
-        }
-        assertNotNull(ex);
-    }
-
-
-    @Test
-    public void testFileOverwrite() {
-        KVStorage store = new KVStorage();
-        try {
-            store.writeToDisk("overwrittenFile", "File_contents 1");
-        } catch (FileNotFoundException fnfe) {
-            assertTrue(false);
-        } catch (UnsupportedEncodingException uee) {
-            assertTrue(false);
-        }
-
-        String funcOut = "";
-        try {
-            funcOut = store.getFileContents("overwrittenFile");
-        } catch (FileNotFoundException e) {
-            assertTrue(false);
-=======
     static {
         try {
             new LogSetup("logs/testing/test.log", Level.INFO);
@@ -157,46 +67,9 @@ public class AdditionalTest extends TestCase {
             } catch (Exception e) {
                 logger.error("io exception during updated write", e);
             }
->>>>>>> single_storage
         }
         assertEquals("File_contents 1", funcOut);
 
-<<<<<<< HEAD
-        try {
-            store.writeToDisk("overwrittenFile", "File_contents 2");
-        } catch (FileNotFoundException fnfe) {
-            assertTrue(false);
-        } catch (UnsupportedEncodingException uee) {
-            assertTrue(false);
-        }
-
-        try {
-            funcOut = store.getFileContents("overwrittenFile");
-        } catch (FileNotFoundException e) {
-            assertTrue(false);
-        }
-        assertEquals("File_contents 2", funcOut);
-    }
-
-	@Test
-	public void testJsonMessage() {
-		JsonMessage msg = new JsonMessage(KVMessage.StatusType.PUT, "sampleKey", "sampleValue");
-		String strMsg = msg.serialize();
-		System.out.println(strMsg);
-		JsonMessage deserializedMsg = new JsonMessage();
-		deserializedMsg.deserialize(strMsg);
-
-		assert(deserializedMsg.getKey().equals("sampleKey"));
-		assert(deserializedMsg.getValue().equals("sampleValue"));
-		assert(deserializedMsg.getStatus() == (KVMessage.StatusType.PUT));
-	}
-
-	@Test
-    public void testFileExistsOnNonExistingFile(){
-        KVStorage store = new KVStorage();
-        boolean res = store.checkIfFileExists("ThisFileShouldntExist");
-        assertFalse(res);
-=======
         for (KVData readEntry : readDataList) {
             try {
                 KVData foundEntry = storage.read(readEntry.getKey());
@@ -221,7 +94,6 @@ public class AdditionalTest extends TestCase {
             }
         }
         storageFile.delete();
->>>>>>> single_storage
     }
 
 
