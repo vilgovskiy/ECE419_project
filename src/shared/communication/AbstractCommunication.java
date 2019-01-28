@@ -40,6 +40,7 @@ public abstract class AbstractCommunication implements CommunicationInterface {
 
 		/* read first char from stream */
 		byte read = (byte) input.read();
+		if (read == -1) throw new IOException("Reached end of data");
 		boolean reading = true;
 
 		while(read != 13 && reading) {/* carriage return */
