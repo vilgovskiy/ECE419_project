@@ -124,25 +124,28 @@ public class KVStorage implements IKVStorage {
             long currOffset = raf.length();
             if (currOffset == 0) return false;
 
-            currOffset -= 8;
-            raf.seek(currOffset);
-            raf.read(keySizeBytes);
-            raf.read(valueSizeBytes);
+            while (currOffset > 0) {
+                currOffset -= 8;
+                raf.seek(currOffset);
+                raf.read(keySizeBytes);
+                raf.read(valueSizeBytes);
 
-            int keySize = ByteBuffer.wrap(keySizeBytes).getInt();
-            int valueSize = ByteBuffer.wrap(valueSizeBytes).getInt();
+                int keySize = ByteBuffer.wrap(keySizeBytes).getInt();
+                int valueSize = ByteBuffer.wrap(valueSizeBytes).getInt();
 
-            byte[] keyBytes = new byte[keySize];
-            currOffset -= (keySize + valueSize);
-            raf.seek(currOffset);
-            raf.read(keyBytes);
-            String keyString = new String(keyBytes, Charset.forName("UTF-8"));
+                byte[] keyBytes = new byte[keySize];
+                currOffset -= (keySize + valueSize);
+                raf.seek(currOffset);
+                raf.read(keyBytes);
+                String keyString = new String(keyBytes, Charset.forName("UTF-8"));
 
-            if (keyString.equals(key) && valueSize != 0) {
-                found = true;
+                if (keyString.equals(key) && valueSize != 0) {
+                    found = true;
+                    raf.close();
+                    return found;
+                }
             }
-            raf.close();
-            return found;
+            return false;
         } finally {
             rwLock.readLock().unlock();
         }
