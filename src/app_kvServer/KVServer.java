@@ -110,15 +110,24 @@ public class KVServer extends Thread implements IKVServer {
 		if (cache.inCache(key)) {
             responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
 		    responseMsg.setValue(cache.getKV(key));
+
 		} else {
 		    if (inStorage(key)) {
                 try {
                     KVData foundEntry = storage.read(key);
                     String value = foundEntry.getValue();
-                    responseMsg.setValue(value);
-                    responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
-                    cache.putKV(key, value);
-                    logger.info("GET_SUCCESS for <key: " + key + ", value: " + foundEntry.getValue() + ">");
+                    if (value.equals("")) {
+                        responseMsg.setValue("");
+                        responseMsg.setStatus(KVMessage.StatusType.GET_ERROR);
+                        cache.putKV(key, value);
+                        logger.info("GET_ERROR for <key: " + key + ", value: " + foundEntry.getValue() + ">");
+                    }
+                    else {
+                        responseMsg.setValue(value);
+                        responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
+                        cache.putKV(key, value);
+                        logger.info("GET_SUCCESS for <key: " + key + ", value: " + foundEntry.getValue() + ">");
+                    }
                 } catch (Exception e) {
                     logger.error("Error while finding key: " + key + " from storage", e);
                     responseMsg.setStatus(KVMessage.StatusType.GET_ERROR);
