@@ -7,11 +7,11 @@ public class ServerMetadata {
     private String cacheStrategy;
     private Integer cacheSize;
 
-    public ServerMetadata(String cacheStrategy, Integer cacheSize) {
-        this.cacheStrategy = cacheStrategy;
-        this.cacheSize = cacheSize;
+    public ServerMetadata(Integer cacheSize, String cacheStrategy) {
         this.serverPort = 0;
         this.hostname = "localhost";
+        this.cacheStrategy = cacheStrategy;
+        this.cacheSize = cacheSize;
     }
 
     public void setHostname(String hostname) {
