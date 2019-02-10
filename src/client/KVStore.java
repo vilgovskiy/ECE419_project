@@ -36,12 +36,6 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 
 	public int getPort() { return port; }
 
-	public boolean isRunning(){
-		return running;
-	}
-
-	public void setRunning(boolean run){ running = run; }
-
 	@Override
 	public void connect() throws Exception {
 		if (clientSocket != null) {
@@ -100,4 +94,13 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 
 		return jsonResp;
 	}
+
+	public boolean isRunning(){
+		return running;
+	}
+
+	public void setRunning(boolean run){
+		running = run;
+	}
+
 }
