@@ -250,7 +250,7 @@ public class KVServer extends Thread implements IKVServer {
             logger.info("Server listening on the port " + serverSocket.getLocalPort());
             return true;
         } catch (IOException e) {
-            logger.error("Cannot open server socket:");
+            logger.error("Cannot open server socket!");
             if (e instanceof BindException) {
                 logger.error("Port " + port + " is already bound!");
             }
