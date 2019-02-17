@@ -47,4 +47,22 @@ public class ECStests extends TestCase {
         assert  ringRebuilt != null;
     }
 
+    @Test
+    public void testUpdateMetadata(){
+        ECSConsistentHash hashRing = new ECSConsistentHash();
+        ECSNode node = new ECSNode("node_name", "localhost", 50000);
+        ECSNode node1 = new ECSNode("node_name", "google.com", 50001);
+        ECSNode node2 = new ECSNode("node_name", "yandex", 50543);
+
+        hashRing.addNode(node);
+        hashRing.addNode(node1);
+        hashRing.addNode(node2);
+
+        String serializedRing = hashRing.serializeHash();
+
+        ECSConsistentHash hashRing2 = new ECSConsistentHash();
+        hashRing2.updateConsistentHashWithNewMetadata(serializedRing);
+        assertTrue(hashRing2.getRingSize() == 3);
+    }
+
 }

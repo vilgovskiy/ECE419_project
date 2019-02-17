@@ -18,9 +18,9 @@ public class ECSConsistentHash {
     public void addNode(ECSNode node){
         String nodeHash = node.getNodeHash();
         ring.put(nodeHash, node);
-
-
     }
+
+    public Integer getRingSize(){return ring.size();}
 
     public ECSNode removeNode(String key){
         return  ring.remove(key);
@@ -38,6 +38,17 @@ public class ECSConsistentHash {
         Gson gson = new Gson();
         String json = gson.toJson(ring);
         return json;
+    }
+
+    public void updateConsistentHashWithNewMetadata(String json){
+
+        ring.clear();
+
+        Gson gson = new Gson();
+        Object result = gson.fromJson(json, SortedMap.class);
+        SortedMap<String, ECSNode> ringRebuilt = (SortedMap<String, ECSNode>) result;
+        ring.putAll(ringRebuilt);
+
     }
 
 
