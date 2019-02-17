@@ -4,6 +4,7 @@ import java.net.Socket;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 
+import ecs.IECSNode;
 import shared.communication.AbstractCommunication;
 import shared.messages.KVMessage;
 import shared.messages.JsonMessage;
@@ -19,6 +20,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	private boolean running;
 	private String address;
 	private int port;
+	private ECSConsistentHashRing ecsHashRing;
 
 	private Socket clientSocket;
 
@@ -30,6 +32,9 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	public KVStore(String address, int port) {
 		this.address = address;
 		this.port = port;
+		ECSNode newNode = new ECSNode("node-1", this.address, this.port);
+		ecsHashRing = new ECSConsistentnHash();
+		ecsHashRing.addNode(newNode);
 	}
 
 	public String getAddress() { return address; }
@@ -72,18 +77,56 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		}
 	}
 
+	private void reconnectToCorrectServer(KVMessage req) throws Exception {
+		String keyhash = ECSNode.calculateHash(req.getKey());
+		ECSNode correctServer = ecsHashRing.getNodeByKey(keyhash);
+		String correctHost = correctServer.getNodeHost();
+		int correctPort = correctServer.getNodePort();
+		if ( !this.address.equals(correctHost) || this.port != correctPort) {
+			this.address = correctHost;
+			this.port = correctPort;
+			disconnect();
+			connect();
+		}
+	}
+
+	private KVMessage handleNotResponsibleResp(KVMessage req, KVMessage resp) throws Exception {
+		if (resp.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
+			String keyHash = ECSNode.calculateHash(req.getKey());
+			ecsHashRing = new ECSConsistentHash(resp.getValue());
+			ECSNode correctServer = ecsHashRing.getNodeByKey(keyHash);
+
+			this.address = correctServer.getNodeHost();
+			this.port = correctServer.getNodePort();
+
+			logger.info("NotResponsibleResponse, now connecting to host " + this.address + ":" + this.port);
+
+			disconnect();
+			connect();
+			if (req.getStatus().equals(KVMessage.StatusType.GET)) {
+				return this.get(req.getKey());
+			} else if (req.getStatus().equals(KVMessage.StatusType.PUT)) {
+				return this.put(req.getKey(), req.getValue());
+			} else {
+				logger.fatal("Error, not supposed to happen");
+			}
+		}
+		return resp;
+	}
+
 
 	@Override
 	public KVMessage put(String key, String value) throws Exception {
 		logger.info("PUT request to server. Key: " + key + " , Value: " + value);
 
 		JsonMessage jsonReq = new JsonMessage(KVMessage.StatusType.PUT, key, value);
+		reconnectToCorrectServer(jsonReq);
 		TextMessage req = new TextMessage(jsonReq.serialize());
 		sendMessage(req);
 		TextMessage resp = receiveMessage();
 		JsonMessage jsonResp = new JsonMessage();
 		jsonResp.deserialize(resp.getMsg());
-
+		handleNotResponsibleResp(jsonReq, jsonResp);
 		return jsonResp;
 	}
 
@@ -92,12 +135,15 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		logger.info("GET request to server. Key: " + key);
 
 		JsonMessage jsonReq = new JsonMessage(KVMessage.StatusType.GET, key, "");
+		reconnectToCorrectServer(jsonReq);
 		TextMessage req = new TextMessage(jsonReq.serialize());
 		sendMessage(req);
 		TextMessage resp = receiveMessage();
 		JsonMessage jsonResp = new JsonMessage();
 		jsonResp.deserialize(resp.getMsg());
+		handleNotResponsibleResp(jsonReq, jsonResp);
 
 		return jsonResp;
 	}
 }
+
