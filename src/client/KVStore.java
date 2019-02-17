@@ -5,6 +5,9 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 
 import ecs.IECSNode;
+import ecs.ECSNode;
+import ecs.ECSConsistentHash;
+
 import shared.communication.AbstractCommunication;
 import shared.messages.KVMessage;
 import shared.messages.JsonMessage;
@@ -20,7 +23,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	private boolean running;
 	private String address;
 	private int port;
-	private ECSConsistentHashRing ecsHashRing;
+	private ECSConsistentHash ecsHashRing;
 
 	private Socket clientSocket;
 
@@ -33,7 +36,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		this.address = address;
 		this.port = port;
 		ECSNode newNode = new ECSNode("node-1", this.address, this.port);
-		ecsHashRing = new ECSConsistentnHash();
+		ecsHashRing = new ECSConsistentHash();
 		ecsHashRing.addNode(newNode);
 	}
 
