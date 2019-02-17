@@ -8,7 +8,7 @@ import java.util.TreeMap;
 
 public class ECSConsistentHash {
 
-    private final SortedMap<String, ECSNode> ring = new TreeMap<>();
+    private SortedMap<String, ECSNode> ring = new TreeMap<>();
 
     private Logger logger = Logger.getRootLogger();
 
