@@ -61,7 +61,7 @@ public class ECStests extends TestCase {
         String serializedRing = hashRing.serializeHash();
 
         ECSConsistentHash hashRing2 = new ECSConsistentHash();
-        hashRing2.updateConsistentHashWithNewMetadata(serializedRing);
+        hashRing2.updateConsistentHash(serializedRing);
         assertTrue(hashRing2.getRingSize() == 3);
     }
 

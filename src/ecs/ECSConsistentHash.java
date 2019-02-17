@@ -40,7 +40,7 @@ public class ECSConsistentHash {
         return json;
     }
 
-    public void updateConsistentHashWithNewMetadata(String json){
+    public void updateConsistentHash(String json){
 
         ring.clear();
 
