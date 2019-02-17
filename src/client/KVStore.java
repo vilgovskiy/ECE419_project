@@ -4,6 +4,7 @@ import java.net.Socket;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 
+import ecs.IECSNode;
 import shared.communication.AbstractCommunication;
 import shared.messages.KVMessage;
 import shared.messages.JsonMessage;
@@ -32,7 +33,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		this.address = address;
 		this.port = port;
 		ECSNode newNode = new ECSNode("node-1", this.address, this.port);
-		ecsHashRing = new ECSConsistentnHashRing();
+		ecsHashRing = new ECSConsistentnHash();
 		ecsHashRing.addNode(newNode);
 	}
 
@@ -92,7 +93,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	private KVMessage handleNotResponsibleResp(KVMessage req, KVMessage resp) throws Exception {
 		if (resp.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
 			String keyHash = ECSNode.calculateHash(req.getKey());
-			ecsHashRing = new ECSConsistentHashRing(resp.getValue());
+			ecsHashRing = new ECSConsistentHash(resp.getValue());
 			ECSNode correctServer = ecsHashRing.getNodeByKey(keyHash);
 
 			this.address = correctServer.getNodeHost();
