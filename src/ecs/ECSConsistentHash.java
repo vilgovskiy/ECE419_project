@@ -19,8 +19,6 @@ public class ECSConsistentHash {
         String nodeHash = node.getNodeHash();
         ring.put(nodeHash, node);
 
-        String prevNodeKey =  ring.headMap(nodeHash).lastKey();
-        ECSNode prevNode = ring.get(prevNodeKey);
 
     }
 
@@ -37,7 +35,9 @@ public class ECSConsistentHash {
     }
 
     public String serializeHash (){
-        return "";
+        Gson gson = new Gson();
+        String json = gson.toJson(ring);
+        return json;
     }
 
 
