@@ -17,7 +17,28 @@ public class ECSConsistentHash {
 
     public void addNode(ECSNode node){
         String nodeHash = node.getNodeHash();
+        ECSNode prevNode = findPrevNode(nodeHash);
+        node.setPrev(prevNode);
+
+        //When there is only 1 element in the ring, need to set its prev to newly inserted
+        if(ring.size() == 1){
+            ring.get(ring.lastKey()).setPrev(node);
+        }
+
+        
+
         ring.put(nodeHash, node);
+    }
+
+    private ECSNode findPrevNode(String hash){
+        ECSNode prevNode = null;
+        SortedMap<String, ECSNode> prevNodes = ring.headMap(hash);
+        if (!prevNodes.isEmpty()){
+            prevNode = prevNodes.get(prevNodes.lastKey());
+        } else if (!(prevNodes = ring.tailMap(hash)).isEmpty()){
+            prevNode = prevNodes.get(prevNodes.lastKey());
+        }
+        return null;
     }
 
     public Integer getRingSize(){return ring.size();}

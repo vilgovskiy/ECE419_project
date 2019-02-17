@@ -3,7 +3,6 @@ package ecs;
 import org.apache.log4j.Logger;
 
 import javax.xml.bind.DatatypeConverter;
-import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
@@ -51,6 +50,12 @@ public class ECSNode implements IECSNode {
     @Override
     public int getNodePort() {
         return port;
+    }
+
+    public ECSNode getPrevNode(){return prev;}
+
+    public void setPrev (ECSNode _prev){
+        this.prev = _prev;
     }
 
     public String getNodeHash(){
