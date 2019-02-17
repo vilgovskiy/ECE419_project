@@ -2,6 +2,7 @@ package ecs;
 
 import org.apache.log4j.Logger;
 
+import javax.xml.bind.DatatypeConverter;
 import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -59,9 +60,11 @@ public class ECSNode implements IECSNode {
     public String calculateHash(String str){
         messageDigest.reset();
         messageDigest.update(str.getBytes());
-        BigInteger result = new BigInteger(1, messageDigest.digest());
 
-        return result.toString(16);
+        String result = DatatypeConverter
+                .printHexBinary(messageDigest.digest()).toUpperCase();
+
+        return result;
     }
 
 
