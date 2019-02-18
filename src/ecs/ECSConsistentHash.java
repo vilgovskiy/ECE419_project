@@ -9,7 +9,7 @@ import java.util.TreeMap;
 
 public class ECSConsistentHash {
 
-    private SortedMap<String, ECSNode> ring = new TreeMap<>();
+    private SortedMap<String, IECSNode> ring = new TreeMap<>();
 
     private Logger logger = Logger.getRootLogger();
 
@@ -20,17 +20,17 @@ public class ECSConsistentHash {
         updateConsistentHash(input);
     }
 
-    public void addNode(ECSNode node){
+    public void addNode(IECSNode node){
         String nodeHash = node.getNodeHash();
 
         //Find and set previous node for newly added one
-        ECSNode prevNode = findPrevNode(nodeHash);
+        IECSNode prevNode = findPrevNode(nodeHash);
         if (prevNode != null) {
             node.setPrev(prevNode.getNodeHash());
         }
 
         //Find next node and set new one as previous
-        ECSNode nextNode = findNextNode(nodeHash);
+        IECSNode nextNode = findNextNode(nodeHash);
         if (nextNode != null) {
             nextNode.setPrev(node.getNodeHash());
         }
@@ -38,9 +38,9 @@ public class ECSConsistentHash {
         ring.put(nodeHash, node);
     }
 
-    private ECSNode findPrevNode(String hash){
-        ECSNode prevNode = null;
-        SortedMap<String, ECSNode> prevNodes = ring.headMap(hash);
+    private IECSNode findPrevNode(String hash){
+        IECSNode prevNode = null;
+        SortedMap<String, IECSNode> prevNodes = ring.headMap(hash);
         if (!prevNodes.isEmpty()){
             prevNode = prevNodes.get(prevNodes.lastKey());
         } else if (!(prevNodes = ring.tailMap(hash)).isEmpty()){
@@ -49,9 +49,9 @@ public class ECSConsistentHash {
         return prevNode;
     }
 
-    private ECSNode findNextNode(String hash){
-        ECSNode nextNode = null;
-        SortedMap<String, ECSNode> nextNodes = ring.tailMap(hash);
+    private IECSNode findNextNode(String hash){
+        IECSNode nextNode = null;
+        SortedMap<String, IECSNode> nextNodes = ring.tailMap(hash);
         if (!nextNodes.isEmpty()){
             nextNode = nextNodes.get(nextNodes.firstKey());
         } else if (!(nextNodes = ring.headMap(hash)).isEmpty()){
@@ -62,7 +62,7 @@ public class ECSConsistentHash {
 
     public Integer getRingSize(){return ring.size();}
 
-    public ECSNode removeNode(String key){
+    public IECSNode removeNode(String key){
         return  ring.remove(key);
     }
 
@@ -94,7 +94,7 @@ public class ECSConsistentHash {
 
     }
 
-    public ECSNode getNodeByKey(String key){
+    public IECSNode getNodeByKey(String key){
         return ring.get(key);
     }
 

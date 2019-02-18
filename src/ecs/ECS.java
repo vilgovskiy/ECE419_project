@@ -1,17 +1,16 @@
 package ecs;
 
 
+import app_kvECS.IECSClient;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
 
 import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Queue;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class ECS implements Watcher {
+public class ECS implements Watcher, IECSClient {
 
     private static Logger logger = Logger.getRootLogger();
 
@@ -57,6 +56,25 @@ public class ECS implements Watcher {
 
         }
 
+    }
+
+    @Override
+    public boolean start(){
+        //Assume that servers are already initialized and currently in STOPPED state
+        List<IECSNode> listOfNodesToStart = new ArrayList<>();
+        for(IECSNode node : initNodes.values()){
+            if (node.getStatus().equals(ECSNode.ServerStatus.STOP)){
+                listOfNodesToStart.add(node);
+            }
+        }
+        for(IECSNode node : listOfNodesToStart){
+            hashRing.addNode(node);
+        }
+
+        //Need to first redistribute all data among the nodes
+
+        //Then need to activate all the nodes
+        return true;
     }
 
     /**

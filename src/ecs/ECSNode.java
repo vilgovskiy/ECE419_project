@@ -50,6 +50,7 @@ public class ECSNode implements IECSNode {
         this.host = _host;
         this.port = _port;
         this.prevNodeHash = "";
+        this.status = ServerStatus.OFFLINE;
 
         if(_host != null && _port != null){
             this.hash = ECSNode.calculateHash(_host + ":" + _port);

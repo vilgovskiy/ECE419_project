@@ -67,4 +67,14 @@ public class ECStests extends TestCase {
         assertTrue(hashRing2.getRingSize() == 4 );
     }
 
+    @Test
+    public void testSerializeEmptyHashRing(){
+        ECSConsistentHash hashRing = new ECSConsistentHash();
+        String serialized = hashRing.serializeHash();
+        assertTrue(!serialized.isEmpty());
+
+        ECSConsistentHash hashRing2 = new ECSConsistentHash();
+        hashRing2.updateConsistentHash(serialized);
+        assert (hashRing.empty());
+    }
 }
