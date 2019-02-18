@@ -62,7 +62,7 @@ public class ECSNode implements IECSNode {
         return hash;
     }
 
-    public String calculateHash(String str){
+    public static String calculateHash(String str){
         messageDigest.reset();
         messageDigest.update(str.getBytes());
 
