@@ -4,10 +4,9 @@ import java.net.Socket;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 
-import ecs.IECSNode;
-import ecs.ECSNode;
 import ecs.ECSConsistentHash;
-
+import ecs.ECSNode;
+import ecs.IECSNode;
 import shared.communication.AbstractCommunication;
 import shared.messages.KVMessage;
 import shared.messages.JsonMessage;

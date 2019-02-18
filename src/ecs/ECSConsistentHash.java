@@ -83,6 +83,10 @@ public class ECSConsistentHash {
 
     }
 
+    public ECSNode getNodeByKey(String key){
+        return ring.get(key);
+    }
+
 
 
 }

@@ -31,7 +31,7 @@ public class ECSNode implements IECSNode {
         this.port = _port;
 
         if(_host != null && _port != null){
-            this.hash = calculateHash(_host + ":" + _port);
+            this.hash = ECSNode.calculateHash(_host + ":" + _port);
         }
 
     }
@@ -52,12 +52,15 @@ public class ECSNode implements IECSNode {
         return port;
     }
 
+    @Override
     public ECSNode getPrevNode(){return prev;}
 
-    public void setPrev (ECSNode _prev){
+    @Override
+    public void setPrev(ECSNode _prev){
         this.prev = _prev;
     }
 
+    @Override
     public String getNodeHash(){
         return hash;
     }

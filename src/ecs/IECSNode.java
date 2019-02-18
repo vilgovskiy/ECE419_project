@@ -17,6 +17,11 @@ public interface IECSNode {
      */
     public int getNodePort();
 
+    ECSNode getPrevNode();
+
+    void setPrev(ECSNode _prev);
+
+    String getNodeHash();
     /**
      * @return  array of two strings representing the low and high range of the hashes that the given node is responsible for
      */
