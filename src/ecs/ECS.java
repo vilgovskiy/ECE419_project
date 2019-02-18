@@ -2,11 +2,12 @@ package ecs;
 
 
 import org.apache.log4j.Logger;
-import org.apache.zookeeper.WatchedEvent;
-import org.apache.zookeeper.Watcher;
-import org.apache.zookeeper.ZooKeeper;
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.data.Stat;
 
 import java.io.*;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -18,9 +19,17 @@ public class ECS implements Watcher {
     public static final String ZK_PORT = "49999";
     public static final Integer ZK_TIMEOUT = 5000;
 
+    public static final String ZK_METADATA_PATH = "/metadata";
+    public static final String ZK_SERVER_ROOT = "/kv_servers";
 
     // Set of all servers available in the system through config file
     private Queue<IECSNode> nodePool = new ConcurrentLinkedQueue<>();
+
+    //Holds all currently initialized nodes
+    private Map<String, IECSNode> initNodes = new HashMap<>();
+
+    //Contains all all hash mappings of all currently active servers
+    private ECSConsistentHash hashRing = new ECSConsistentHash();
     private ZooKeeper zk;
 
     public ECS(String configFile) throws IOException {
@@ -37,7 +46,7 @@ public class ECS implements Watcher {
 
         zk = new ZooKeeper(ZK_IP + ":" + ZK_PORT, ZK_TIMEOUT, this);
 
-//        updateMetadata
+        updateMetadata();
 
     }
 
@@ -49,4 +58,28 @@ public class ECS implements Watcher {
         }
 
     }
+
+    /**
+     * Push the metadata(hash ring content) to ZooKeeper z-node
+     */
+    private boolean updateMetadata() {
+        try {
+            Stat exists = zk.exists(ZK_METADATA_PATH, false);
+            if (exists == null) {
+                zk.create(ZK_METADATA_PATH, hashRing.serializeHash().getBytes(),
+                        ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            } else {
+                zk.setData(ZK_METADATA_PATH, hashRing.serializeHash().getBytes(),
+                        exists.getVersion());
+            }
+        } catch (InterruptedException e) {
+            logger.error("Interrupted");
+            return false;
+        } catch (KeeperException e) {
+            logger.error(e.getMessage());
+            return false;
+        }
+        return true;
+    }
+
 }
