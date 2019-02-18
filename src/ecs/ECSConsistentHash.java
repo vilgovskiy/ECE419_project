@@ -15,6 +15,10 @@ public class ECSConsistentHash {
     public ECSConsistentHash(){
     }
 
+    public ECSConsistentHash(String input){
+        updateConsistentHash(input);
+    }
+
     public void addNode(ECSNode node){
         String nodeHash = node.getNodeHash();
 
