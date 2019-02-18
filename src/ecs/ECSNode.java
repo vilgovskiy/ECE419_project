@@ -16,6 +16,26 @@ public class ECSNode implements IECSNode {
     private String prevNodeHash;
     private String hash;
 
+    @Override
+    public ServerStatus getStatus() {
+        return status;
+    }
+
+    @Override
+    public void setStatus(ServerStatus status) {
+        this.status = status;
+    }
+
+    public enum ServerStatus {
+        OFFLINE,
+        INACTIVE, // ssh launched but not yet communicate with ECS yet
+        STOP,
+        ACTIVE,
+    }
+
+    private ServerStatus status;
+
+
     static {
         try {
             messageDigest = MessageDigest.getInstance("MD5");

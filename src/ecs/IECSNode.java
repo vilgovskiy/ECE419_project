@@ -2,6 +2,10 @@ package ecs;
 
 public interface IECSNode {
 
+    ECSNode.ServerStatus getStatus();
+
+    void setStatus(ECSNode.ServerStatus status);
+
     /**
      * @return  the name of the node (ie "Server 8.8.8.8")
      */
