@@ -13,7 +13,7 @@ public class ECSNode implements IECSNode {
     private String name;
     private String host;
     private Integer port;
-    private ECSNode prev;
+    private String prevNodeHash;
     private String hash;
 
     static {
@@ -29,6 +29,7 @@ public class ECSNode implements IECSNode {
         this.name = _name;
         this.host = _host;
         this.port = _port;
+        this.prevNodeHash = "";
 
         if(_host != null && _port != null){
             this.hash = ECSNode.calculateHash(_host + ":" + _port);
@@ -53,11 +54,11 @@ public class ECSNode implements IECSNode {
     }
 
     @Override
-    public ECSNode getPrevNode(){return prev;}
+    public String getPrevNode(){return prevNodeHash;}
 
     @Override
-    public void setPrev(ECSNode _prev){
-        this.prev = _prev;
+    public void setPrev(String _prev){
+        this.prevNodeHash = _prev;
     }
 
     @Override
@@ -78,9 +79,9 @@ public class ECSNode implements IECSNode {
 
     @Override
     public String[] getNodeHashRange() {
-        if (prev == null){
+        if (prevNodeHash.isEmpty()){
             return null;
         }
-        return new String[]{this.prev.getNodeHash(), this.getNodeHash()};
+        return new String[]{this.prevNodeHash, this.getNodeHash()};
     }
 }

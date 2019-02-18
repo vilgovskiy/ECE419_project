@@ -17,9 +17,9 @@ public interface IECSNode {
      */
     public int getNodePort();
 
-    ECSNode getPrevNode();
+    String getPrevNode();
 
-    void setPrev(ECSNode _prev);
+    void setPrev(String _prev);
 
     String getNodeHash();
     /**

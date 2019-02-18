@@ -3,6 +3,7 @@ package ecs;
 import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
+import java.util.Map;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -24,12 +25,15 @@ public class ECSConsistentHash {
 
         //Find and set previous node for newly added one
         ECSNode prevNode = findPrevNode(nodeHash);
-        node.setPrev(prevNode);
+        if (prevNode != null) {
+            node.setPrev(prevNode.getNodeHash());
+        }
 
         //Find next node and set new one as previous
         ECSNode nextNode = findNextNode(nodeHash);
-        nextNode.setPrev(node);
-
+        if (nextNode != null) {
+            nextNode.setPrev(node.getNodeHash());
+        }
 
         ring.put(nodeHash, node);
     }
@@ -83,7 +87,10 @@ public class ECSConsistentHash {
         Gson gson = new Gson();
         Object result = gson.fromJson(json, SortedMap.class);
         SortedMap<String, ECSNode> ringRebuilt = (SortedMap<String, ECSNode>) result;
-        ring.putAll(ringRebuilt);
+        for(Map.Entry<String, ECSNode> entry : ringRebuilt.entrySet()){
+            ECSNode node = (ECSNode) gson.fromJson(gson.toJson(entry.getValue()), ECSNode.class);
+            ring.put(entry.getKey(), node);
+        }
 
     }
 

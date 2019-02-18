@@ -62,7 +62,9 @@ public class ECStests extends TestCase {
 
         ECSConsistentHash hashRing2 = new ECSConsistentHash();
         hashRing2.updateConsistentHash(serializedRing);
-        assertTrue(hashRing2.getRingSize() == 3);
+        ECSNode testNew = new ECSNode("test_node", "localhost", 123456);
+        hashRing2.addNode(testNew);
+        assertTrue(hashRing2.getRingSize() == 4 );
     }
 
 }
