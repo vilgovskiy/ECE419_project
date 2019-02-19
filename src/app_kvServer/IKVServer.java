@@ -103,4 +103,9 @@ public interface IKVServer {
 	 * Check if writes are locked
 	 */
 	public boolean writeLocked();
+
+	/**
+	 * Get the metadata from the server
+	 */
+	public ECSConsistentHash getMetadata();
 }

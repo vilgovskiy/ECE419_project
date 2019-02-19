@@ -261,15 +261,25 @@ public class KVServer extends Thread implements IKVServer {
         }
     }
 
-    private boolean checkValidKeyValue(String key, String value) {
-        if (key == null || key.equals("") || key.contains(" ") || key.getBytes().length > maxKeyLength
-                || value.getBytes().length > maxValueLength) return false;
-        else return true;
-    }
+	@Override
+	public ECSConsistentHash getMetadata() {
+		return metadata;
+	}
 
-    private boolean isRunning() {
-        return this.running;
-    }
+	@Override
+	public synchronized boolean inServerKeyRange(String key) {
+		return key.compareTo(start) >= 0 && key.compareTo(end) < 0;
+	}
+
+	@Override
+	public boolean serverStopped() {
+		return stopped;
+	}
+
+	@Override
+	public boolean writeLocked() {
+		return lock_writes;
+	}
 
 	public void rejectClientRequests() {
 		stopped = true;
@@ -277,10 +287,6 @@ public class KVServer extends Thread implements IKVServer {
 
 	public void acceptClientRequests() {
 		stopped = false;
-	}
-
-	public boolean serverStopped() {
-		return stopped;
 	}
 
 	public void lockWrite() {
@@ -292,10 +298,6 @@ public class KVServer extends Thread implements IKVServer {
 
 	public void unlockWrite() {
 		lock_writes = false;
-	}
-
-	public boolean writeLocked() {
-		return lock_writes;
 	}
 
 	public void moveData(String start, String end, String address, String port) {
@@ -315,17 +317,19 @@ public class KVServer extends Thread implements IKVServer {
 
 	}
 
-	public String getMetadata() {
-		return metadata.serializeHash();
-	}
-
-	public synchronized boolean inServerKeyRange(String key) {
-		return key.compareTo(start) >= 0 && key.compareTo(end) < 0;
-	}
-
 	public synchronized void setRange(String[] range) {
 		this.start = range[0];
 		this.end = range[1];
+	}
+
+	private boolean checkValidKeyValue(String key, String value) {
+		if (key == null || key.equals("") || key.contains(" ") || key.getBytes().length > maxKeyLength
+				|| value.getBytes().length > maxValueLength) return false;
+		else return true;
+	}
+
+	private boolean isRunning() {
+		return this.running;
 	}
 
     /**

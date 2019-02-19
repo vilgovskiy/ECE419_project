@@ -95,7 +95,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	private KVMessage handleNotResponsibleResp(KVMessage req, KVMessage resp) throws Exception {
 		if (resp.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
 			String keyHash = ECSNode.calculateHash(req.getKey());
-			ecsHashRing = new ECSConsistentHash(resp.getValue());
+			ecsHashRing = new ECSConsistentHash(resp.getMetadata());
 			ECSNode correctServer = ecsHashRing.getNodeByKeyHash(keyHash);
 
 			this.address = correctServer.getNodeHost();
@@ -128,8 +128,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		TextMessage resp = receiveMessage();
 		JsonMessage jsonResp = new JsonMessage();
 		jsonResp.deserialize(resp.getMsg());
-		handleNotResponsibleResp(jsonReq, jsonResp);
-		return jsonResp;
+		return handleNotResponsibleResp(jsonReq, jsonResp);
 	}
 
 	@Override
@@ -143,9 +142,6 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		TextMessage resp = receiveMessage();
 		JsonMessage jsonResp = new JsonMessage();
 		jsonResp.deserialize(resp.getMsg());
-		handleNotResponsibleResp(jsonReq, jsonResp);
-
-		return jsonResp;
+		return handleNotResponsibleResp(jsonReq, jsonResp);
 	}
 }
-

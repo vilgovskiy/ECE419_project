@@ -96,7 +96,9 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
 			logger.info(server + " not responsible for key " + msg.getKey());
 			response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
 
-			// TODO Figure out how metadata is sent back to client
+			// Get metadata and send back to client
+			ECSConsistentHash metadata = kvServer.getMetadata();
+			response.setMetadata(metadata);
 		} else {
 			switch (msg.getStatus()) {
 				case PUT:

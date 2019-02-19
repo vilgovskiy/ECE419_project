@@ -1,6 +1,8 @@
 package shared.messages;
 
 
+import ecs.ECSConsistentHash;
+
 import com.google.gson.Gson;
 
 public class JsonMessage implements KVMessage, SerializeDeserializable {
@@ -8,6 +10,7 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
     private StatusType status;
     private String key;
     private String value;
+	private ECSConsistentHash metadata;
 
     public JsonMessage() {
         this.key = "";
@@ -26,15 +29,20 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
         return key;
     }
 
-    @Override 
+    @Override
     public String getValue() {
         return value;
     }
 
-    @Override 
+    @Override
     public StatusType getStatus() {
         return status;
     }
+
+	@Override
+	public ECSConsistentHash getMetadata() {
+		return metadata;
+	}
 
     @Override
     public void setKey(String key) {
@@ -51,6 +59,11 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
         this.status = status;
     }
 
+	@Override
+	public void setMetadata(ECSConsistentHash metadata) {
+		this.metadata = metadata;
+	}
+
     @Override
     public String serialize() {
         return new Gson().toJson(this);
@@ -66,7 +79,7 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
 
     @Override
     public String toString() {
-        return "JSON MSG - STATUS: " + this.status 
+        return "JSON MSG - STATUS: " + this.status
                 + " KEY: " + this.key + " VALUE: " + this.value;
     }
 

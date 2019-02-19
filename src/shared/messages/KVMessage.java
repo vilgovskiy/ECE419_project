@@ -1,7 +1,9 @@
 package shared.messages;
 
+import ecs.ECSConsistentHash;
+
 public interface KVMessage {
-	
+
 	public enum StatusType {
 		GET, 			/* Get - request */
 		GET_ERROR, 		/* requested tuple (i.e. value) not found */
@@ -18,32 +20,38 @@ public interface KVMessage {
 	}
 
 	/**
-	 * @return the key that is associated with this message, 
+	 * @return the key that is associated with this message,
 	 * 		null if not key is associated.
 	 */
 	public String getKey();
-	
+
 	/**
-	 * @return the value that is associated with this message, 
+	 * @return the value that is associated with this message,
 	 * 		null if not value is associated.
 	 */
 	public String getValue();
-	
+
 	/**
-	 * @return a status string that is used to identify request types, 
+	 * @return a status string that is used to identify request types,
 	 * response types and error types associated to the message.
 	 */
 	public StatusType getStatus();
-	
-	/* Setter for field key */ 
+
+	/**
+	 * @return the metadata that represents the entire KV Storage service
+	 */
+	public ECSConsistentHash getMetadata();
+
+	/* Setter for field key */
 	public void setKey(String key);
 
-	/* Setter for field value */ 
+	/* Setter for field value */
 	public void setValue(String value);
 
-	/* Setter for field status */ 
+	/* Setter for field status */
 	public void setStatus(StatusType status);
 
+	/* Setter for metadata field */
+	public void setMetadata(ECSConsistentHash metadata);
+
 }
-
-
