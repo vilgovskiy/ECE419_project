@@ -55,12 +55,10 @@ public class ECSNode implements IECSNode {
         if(_host != null && _port != null){
             this.hash = ECSNode.calculateHash(_host + ":" + _port);
         }
-
     }
 
     @Override
     public String getNodeName() {
-
         return name;
     }
 
@@ -96,7 +94,6 @@ public class ECSNode implements IECSNode {
 
         return result;
     }
-
 
     @Override
     public String[] getNodeHashRange() {
