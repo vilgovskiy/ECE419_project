@@ -308,7 +308,7 @@ public class KVServer extends Thread implements IKVServer {
 
 		// update the range this server is responsible for
 		String key = getHostname() + ":" + getPort();
-		IECSNode n = this.metadata.getNodeByKey(key);
+		IECSNode n = this.metadata.getNodeByKeyHash(key);
 		this.setRange(n.getNodeHashRange());
 
 		// TODO send ack message to ZK/ECS that metadata has been received
