@@ -1,6 +1,6 @@
 package app_kvServer;
 
-
+import ecs.*;
 import logger.LogSetup;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Level;
@@ -22,13 +22,14 @@ public class KVServer extends Thread implements IKVServer {
     private static final int maxKeyLength = 20;
     private static final int maxValueLength = 120 * 1024;
 
-    private int port;
-    private int cacheSize;
+    private int port, cacheSize;
     private CacheStrategy strategy;
-    private boolean running;
+    private boolean running, stopped, lock_writes;
     private ServerSocket serverSocket;
     private IKVStorage storage;
 	private Cache cache;
+	private ECSConsistentHash metadata;
+	private String start, end;
 
 
     /**
@@ -61,6 +62,8 @@ public class KVServer extends Thread implements IKVServer {
 				break;
 			default:
 		}
+
+		this.metadata = new ECSConsistentHash();
         logger.info("creating an instance of the KV server...");
     }
 
@@ -240,13 +243,13 @@ public class KVServer extends Thread implements IKVServer {
     public void close() {
         kill();
         clearCache();
-        //TODO Might also need to wipe cache and remove all connections
     }
 
     private boolean initializeKVServer() {
         logger.info("Starting KVServer...");
         try {
             serverSocket = new ServerSocket(port);
+			stopped = true; // on init, only respond to ECS
             logger.info("Server listening on the port " + serverSocket.getLocalPort());
             return true;
         } catch (IOException e) {
@@ -267,6 +270,63 @@ public class KVServer extends Thread implements IKVServer {
     private boolean isRunning() {
         return this.running;
     }
+
+	public void rejectClientRequests() {
+		stopped = true;
+	}
+
+	public void acceptClientRequests() {
+		stopped = false;
+	}
+
+	public boolean serverStopped() {
+		return stopped;
+	}
+
+	public void lockWrite() {
+		lock_writes = true;
+
+		// TODO Consider cases where there might be threads still writing or
+		// waiting to write to storage
+	}
+
+	public void unlockWrite() {
+		lock_writes = false;
+	}
+
+	public boolean writeLocked() {
+		return lock_writes;
+	}
+
+	public void moveData(String start, String end, String address, String port) {
+		// TODO
+	}
+
+	public void updateMetadata(String json) {
+		// update metadata
+		this.metadata.updateConsistentHash(json);
+
+		// update the range this server is responsible for
+		String key = getHostname() + ":" + getPort();
+		IECSNode n = this.metadata.getNodeByKey(key);
+		this.setRange(n.getNodeHashRange());
+
+		// TODO send ack message to ZK/ECS that metadata has been received
+
+	}
+
+	public String getMetadata() {
+		return metadata.serializeHash();
+	}
+
+	public synchronized boolean inServerKeyRange(String key) {
+		return key.compareTo(start) >= 0 && key.compareTo(end) < 0;
+	}
+
+	public synchronized void setRange(String[] range) {
+		this.start = range[0];
+		this.end = range[1];
+	}
 
     /**
      * Helper function that checks all argument types and if they are vcalid

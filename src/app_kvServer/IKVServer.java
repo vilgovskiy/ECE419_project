@@ -88,4 +88,19 @@ public interface IKVServer {
      * Gracefully stop the server, can perform any additional actions
      */
     public void close();
+
+	/**
+	 * Check if hashed key is within the key range the server is responsible for
+	 */
+	public boolean inServerKeyRange(String key);
+
+	/**
+	 * Check if the server is stopped (accepting client requests)
+	 */
+	public boolean serverStopped();
+
+	/**
+	 * Check if writes are locked
+	 */
+	public boolean writeLocked();
 }
