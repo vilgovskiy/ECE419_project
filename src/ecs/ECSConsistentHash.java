@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -81,9 +82,7 @@ public class ECSConsistentHash {
     }
 
     public void updateConsistentHash(String json){
-
         ring.clear();
-
         Gson gson = new Gson();
         Object result = gson.fromJson(json, SortedMap.class);
         SortedMap<String, ECSNode> ringRebuilt = (SortedMap<String, ECSNode>) result;
@@ -91,11 +90,20 @@ public class ECSConsistentHash {
             ECSNode node = (ECSNode) gson.fromJson(gson.toJson(entry.getValue()), ECSNode.class);
             ring.put(entry.getKey(), node);
         }
-
     }
 
-    public IECSNode getNodeByKey(String key){
-        return ring.get(key);
+    public ECSNode getNodeByKeyHash(String keyHash){
+        // get the node that has hashValue larger or equal than keyHash
+        String upperBound = ring.tailMap(keyHash).firstKey();
+        ECSNode currNode = (ECSNode) ring.get(upperBound);
+
+        // if keyHash == node's Hash, then return since it's inclusive
+        if (upperBound.compareTo(keyHash) == 0) return currNode;
+        // else get a previous node
+        else if (upperBound.compareTo(keyHash) > 0) {
+            currNode = (ECSNode) ring.get(currNode.getPrevNode());
+        }
+        return currNode;
     }
 
 

@@ -81,7 +81,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 
 	private void reconnectToCorrectServer(KVMessage req) throws Exception {
 		String keyhash = ECSNode.calculateHash(req.getKey());
-		ECSNode correctServer = ecsHashRing.getNodeByKey(keyhash);
+		ECSNode correctServer = ecsHashRing.getNodeByKeyHash(keyhash);
 		String correctHost = correctServer.getNodeHost();
 		int correctPort = correctServer.getNodePort();
 		if ( !this.address.equals(correctHost) || this.port != correctPort) {
@@ -96,7 +96,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		if (resp.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
 			String keyHash = ECSNode.calculateHash(req.getKey());
 			ecsHashRing = new ECSConsistentHash(resp.getValue());
-			ECSNode correctServer = ecsHashRing.getNodeByKey(keyHash);
+			ECSNode correctServer = ecsHashRing.getNodeByKeyHash(keyHash);
 
 			this.address = correctServer.getNodeHost();
 			this.port = correctServer.getNodePort();
