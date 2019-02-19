@@ -8,7 +8,7 @@ import java.io.*;
 import java.net.Socket;
 import java.security.MessageDigest;
 
-import ecs.ECSNode;
+import ecs.*;
 import shared.communication.AbstractCommunication;
 import shared.messages.TextMessage;
 import shared.messages.JsonMessage;
@@ -98,7 +98,7 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
 
 			// Get metadata and send back to client
 			ECSConsistentHash metadata = kvServer.getMetadata();
-			response.setMetadata(metadata);
+			response.setMetadata(metadata.serializeHash());
 		} else {
 			switch (msg.getStatus()) {
 				case PUT:

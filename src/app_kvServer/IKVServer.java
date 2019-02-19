@@ -1,5 +1,6 @@
 package app_kvServer;
 
+import ecs.*;
 import shared.messages.JsonMessage;
 
 public interface IKVServer {

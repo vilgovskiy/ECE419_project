@@ -1,7 +1,5 @@
 package shared.messages;
 
-import ecs.ECSConsistentHash;
-
 public interface KVMessage {
 
 	public enum StatusType {
@@ -40,7 +38,7 @@ public interface KVMessage {
 	/**
 	 * @return the metadata that represents the entire KV Storage service
 	 */
-	public ECSConsistentHash getMetadata();
+	public String getMetadata();
 
 	/* Setter for field key */
 	public void setKey(String key);
@@ -52,6 +50,6 @@ public interface KVMessage {
 	public void setStatus(StatusType status);
 
 	/* Setter for metadata field */
-	public void setMetadata(ECSConsistentHash metadata);
+	public void setMetadata(String metadata);
 
 }

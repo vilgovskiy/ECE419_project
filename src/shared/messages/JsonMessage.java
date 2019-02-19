@@ -10,7 +10,7 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
     private StatusType status;
     private String key;
     private String value;
-	private ECSConsistentHash metadata;
+	private String metadata;
 
     public JsonMessage() {
         this.key = "";
@@ -40,7 +40,7 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
     }
 
 	@Override
-	public ECSConsistentHash getMetadata() {
+	public String getMetadata() {
 		return metadata;
 	}
 
@@ -60,7 +60,7 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
     }
 
 	@Override
-	public void setMetadata(ECSConsistentHash metadata) {
+	public void setMetadata(String metadata) {
 		this.metadata = metadata;
 	}
 
