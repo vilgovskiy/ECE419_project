@@ -1,8 +1,5 @@
 package shared.messages;
 
-
-import ecs.ECSConsistentHash;
-
 import com.google.gson.Gson;
 
 public class JsonMessage implements KVMessage, SerializeDeserializable {

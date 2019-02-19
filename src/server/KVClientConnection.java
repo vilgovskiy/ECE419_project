@@ -51,7 +51,7 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                     msg.deserialize(text.getMsg());
                     JsonMessage response = processMsg(msg);
 
-                    TextMessage respText =new TextMessage(response.serialize());
+                    TextMessage respText = new TextMessage(response.serialize());
                     sendMessage(respText);
 
                     /* connection either terminated by the client or lost due to
