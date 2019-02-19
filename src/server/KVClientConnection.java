@@ -88,15 +88,15 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
 		String hashedKey = ECSNode.calculateHash(msg.getKey());
         logger.info("Received message from " + clientSocket.getInetAddress());
 
-		if (!kvServer.inServerKeyRange(hashedKey)) {
+		if (kvServer.serverStopped()) {
+			logger.info("Server stopped, not processing any client requests!");
+			response.setStatus(KVMessage.StatusType.SERVER_STOPPED);
+		} else if (!kvServer.inServerKeyRange(hashedKey)) {
 			String server = kvServer.getHostname() + ":" + kvServer.getPort();
 			logger.info(server + " not responsible for key " + msg.getKey());
 			response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
 
 			// TODO Figure out how metadata is sent back to client
-		} else if (kvServer.serverStopped()) {
-			logger.info("Server stopped, not processing any client requests!");
-			response.setStatus(KVMessage.StatusType.SERVER_STOPPED);
 		} else {
 			switch (msg.getStatus()) {
 				case PUT:
