@@ -7,6 +7,7 @@ import org.apache.log4j.Logger;
 import org.apache.zookeeper.*;
 import org.apache.zookeeper.data.Stat;
 import com.google.gson.Gson;
+import shared.messages.KVAdminMessage;
 
 import java.io.IOException;
 import java.io.BufferedReader;
@@ -14,9 +15,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 
 
-public class ECS implements Watcher, IECSClient {
+public class ECS implements IECSClient {
 
     private static Logger logger = Logger.getRootLogger();
 
@@ -48,21 +50,26 @@ public class ECS implements Watcher, IECSClient {
             ECSNode node = new ECSNode(tokens[0], tokens[1], Integer.parseInt(tokens[2]));
             nodePool.add(node);
         }
-        zk = new ZooKeeper(ZK_IP + ":" + ZK_PORT, ZK_TIMEOUT, this);
+
+        CountDownLatch connSignal = new CountDownLatch(0);
+        zk = new ZooKeeper(ZK_IP + ":" + ZK_PORT, ZK_TIMEOUT, new Watcher() {
+            public void process(WatchedEvent event) {
+                if (event.getState() == Watcher.Event.KeeperState.SyncConnected) {
+                    connSignal.countDown();
+                }
+            }
+        });
+        try {
+            connSignal.await();
+        } catch (InterruptedException e) {
+            logger.error("Interrupted Exception while creating ECS");
+            e.printStackTrace();
+        }
         updateMetadata();
     }
 
     @Override
-    public void process(WatchedEvent event) {
-        if (!event.getState().equals(Event.KeeperState.SyncConnected)){
-            logger.error("Error! ZooKeeper connection expired!");
-
-        }
-
-    }
-
-    @Override
-    public boolean start(){
+    public boolean start() throws Exception {
         //Assume that servers are already initialized and currently in STOPPED state
         List<IECSNode> listOfNodesToStart = new ArrayList<>();
         for(IECSNode node : initNodes.values()){
@@ -73,15 +80,17 @@ public class ECS implements Watcher, IECSClient {
         for(IECSNode node : listOfNodesToStart){
             hashRing.addNode(node);
         }
-        //Need to first redistribute all data among the nodes
+        //TODO: rearrangeDataStorage
 
         // Need to broadcast KVadmin message to all nodes
+        ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToStart);
+        KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.START);
+        broadcaster.broadcast(adminMsg);
 
         for (IECSNode node : listOfNodesToStart) {
             node.setStatus(ECSNode.ServerStatus.ACTIVE);
         }
         updateMetadata();
-        //Then need to activate all the nodes
         return true;
     }
 
@@ -94,7 +103,11 @@ public class ECS implements Watcher, IECSClient {
             }
         }
 
-        // broadcast stop messages to all nodes to stop
+        ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToStop);
+        KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.STOP);
+        broadcaster.broadcast(adminMsg);
+
+        // broadcast stop messages to nodes to stop
         for (IECSNode node : listOfNodesToStop) {
             hashRing.removeNode(node.getNodeHash());
         }
@@ -112,7 +125,12 @@ public class ECS implements Watcher, IECSClient {
             IECSNode node = nodeEntry.getValue();
             listOfNodesToShutdown.add(node);
         }
-        // broadcast shutdown message to all active nodes
+
+        // broadcast shutdown message to active nodes
+        ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToShutdown);
+        KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.SHUT_DOWN);
+        broadcaster.broadcast(adminMsg);
+
         for (Map.Entry<String, IECSNode> nodeEntry : initNodes.entrySet()) {
             IECSNode node = nodeEntry.getValue();
             node.setStatus(ECSNode.ServerStatus.OFFLINE);
@@ -262,10 +280,22 @@ public class ECS implements Watcher, IECSClient {
             }
         }
         // rearrange data
+
+        ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToRemove);
+        KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.SHUT_DOWN);
+        broadcaster.broadcast(adminMsg);
+
+        for (IECSNode node : listOfNodesToRemove) {
+            if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
+                node.setStatus(ECSNode.ServerStatus.OFFLINE);
+                hashRing.removeNode(node.getNodeName());
+                initNodes.remove(node.getNodeName());
+                nodePool.add(node);
+            }
+        }
+        updateMetadata();
         return true;
     }
-
-
 
     @Override
     public Map<String, IECSNode> getNodes() { return initNodes; }
@@ -274,4 +304,58 @@ public class ECS implements Watcher, IECSClient {
     public IECSNode getNodeByKey(String key) { return hashRing.getNodeByKeyHash(key); }
 
     static String getZKNodePath(IECSNode node) { return ZK_SERVER_ROOT + "/" + node.getNodeName(); }
+
+    public boolean redistributeData(Collection<IECSNode> targetNodes) {
+        Set<IECSNode> nodesToTransferFrom = new HashSet<>();
+        Set<IECSNode> nodesToTransferTo = new HashSet<>();
+
+        for (IECSNode node : targetNodes) {
+            if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
+                nodesToTransferFrom.add(node);
+            } else if (node.getStatus().equals(ECSNode.ServerStatus.STOP)) {
+                nodesToTransferTo.add(node);
+            }
+        }
+
+        for (IECSNode node : targetNodes) {
+            if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
+                IECSNode nodeToTransferTo = getNextAvailableNode(node, nodesToTransferFrom);
+                if (nodeToTransferTo != null) {
+                    transferData(node, nodeToTransferTo, node.getNodeHashRange());
+                } else {
+                    logger.warn("No available node to transfer data to...");
+                }
+            } else if (node.getStatus().equals(ECSNode.ServerStatus.STOP)) {
+                IECSNode nodeToTransferFrom = getNextAvailableNode(node, nodesToTransferTo);
+                if (nodeToTransferFrom != null) {
+                    transferData(nodeToTransferFrom, node, node.getNodeHashRange());
+                } else {
+                    logger.warn("No available node to transfer data from to node" + node.getNodeName());
+                }
+            } else { logger.error("Node data redistribution failed"); }
+        }
+        return true;
+
+    }
+
+    public IECSNode getNextAvailableNode(IECSNode node, Set<IECSNode> conditionNodeSet) {
+        IECSNode foundNode = node;
+        int counter = 0;
+
+        while(true) {
+            foundNode = hashRing.findNextNode(foundNode.getNodeHash());
+            if (!conditionNodeSet.contains(node)) {
+                return foundNode;
+            }
+            if (foundNode.equals(node)) {
+                return null;
+            }
+            counter += 1;
+            if (2 * hashRing.getRingSize() < counter ) { return null; }
+        }
+    }
+
+    private boolean transferData(IECSNode src, IECSNode dst, String[] nodeHashRange) {
+        return true;
+    }
 }

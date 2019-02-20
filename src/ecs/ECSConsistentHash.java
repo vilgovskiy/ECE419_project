@@ -50,7 +50,7 @@ public class ECSConsistentHash {
         return prevNode;
     }
 
-    private IECSNode findNextNode(String hash){
+    public IECSNode findNextNode(String hash){
         IECSNode nextNode = null;
         SortedMap<String, IECSNode> nextNodes = ring.tailMap(hash);
         if (!nextNodes.isEmpty()){

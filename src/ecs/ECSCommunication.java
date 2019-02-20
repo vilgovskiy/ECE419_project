@@ -18,10 +18,10 @@ public class ECSCommunication implements Watcher {
 	private ZooKeeper zk;
 	private CountDownLatch latch;
 
-	private Collection<ECSNode> nodes;
+	private Collection<IECSNode> nodes;
 	private static long msgNum = 0;
 
-	public ECSCommunication(ZooKeeper zk, Collection<ECSNode> nodes)  {
+	public ECSCommunication(ZooKeeper zk, Collection<IECSNode> nodes)  {
 		this.zk = zk;
 		this.nodes = nodes;
 		this.latch = new CountDownLatch(nodes.size());
@@ -33,7 +33,7 @@ public class ECSCommunication implements Watcher {
 	 * @param msg the KVAdmin message to send
 	 */
 	public void broadcast(KVAdminMessage msg) {
-		for (ECSNode n : nodes) {
+		for (IECSNode n : nodes) {
 			String msgPath = ECS.getZKNodePath(n) + "/message" + msgNum;
 			msgNum++;
 
