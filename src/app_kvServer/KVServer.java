@@ -96,7 +96,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 					try {
 						byte[] hashRing = zk.getData(ECS.ZK_METADATA_ROOT, this, null);
 						String hashRingString = new String(hashRing);
-						metadata = new ECSHashRing(hashRingString);
+						metadata = new ECSConsistentHash(hashRingString);
 					} catch (KeeperException | InterruptedException e) {
 						logger.error("Unable to update the metadata node");
 						e.printStackTrace();
@@ -105,7 +105,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 			}, null);
 
 			String hashRingString = new String(hashRingData);
-			this.metadata = new ECSHashRing(hashRingString);
+			this.metadata = new ECSConsistentHash(hashRingString);
 
 		} catch (InterruptedException | KeeperException e) {
 			logger.debug("Unable to get metadata info");
