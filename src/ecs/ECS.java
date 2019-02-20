@@ -80,7 +80,8 @@ public class ECS implements IECSClient {
         for(IECSNode node : listOfNodesToStart){
             hashRing.addNode(node);
         }
-        //TODO: rearrangeDataStorage
+
+        redistributeData(listOfNodesToStart);
 
         // Need to broadcast KVadmin message to all nodes
         ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToStart);
@@ -279,7 +280,14 @@ public class ECS implements IECSClient {
                 listOfNodesToRemove.add(node);
             }
         }
-        // rearrange data
+
+        List<IECSNode> listOfNodesToRedistribute = new ArrayList<>();
+        for (IECSNode node : listOfNodesToRemove) {
+            if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
+                listOfNodesToRedistribute.add(node);
+            }
+        }
+        redistributeData(listOfNodesToRedistribute);
 
         ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToRemove);
         KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.SHUT_DOWN);
