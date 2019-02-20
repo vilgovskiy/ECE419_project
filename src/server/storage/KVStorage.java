@@ -2,6 +2,10 @@ package server.storage;
 
 import org.apache.log4j.Logger;
 
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.HashMap;
 import java.io.File;
 import java.io.RandomAccessFile;
 import java.io.IOException;
@@ -110,6 +114,54 @@ public class KVStorage implements IKVStorage {
             rwLock.readLock().unlock();
         }
     }
+
+    public Map<String, String> getAllKVData() throws Exception {
+        rwLock.readLock().lock();
+        Map<String, String> existingKVs = new HashMap<>();
+        Set<String> deletedKeys = new HashSet<>();
+        RandomAccessFile raf = new RandomAccessFile(dataFilePath, "r");
+        long currOffset = raf.length();
+        if (currOffset == 0) {
+            return existingKVs;
+        }
+
+        try {
+            while (currOffset > 0) {
+                byte[] keySizeBytes = new byte[4];
+                byte[] valueSizeBytes = new byte[4];
+                currOffset -= 8;
+                raf.seek(currOffset);
+                raf.read(keySizeBytes);
+                raf.read(valueSizeBytes);
+
+                int keySize = ByteBuffer.wrap(keySizeBytes).getInt();
+                int valueSize = ByteBuffer.wrap(valueSizeBytes).getInt();
+
+                byte[] keyBytes = new byte[keySize];
+                currOffset -= (keySize + valueSize);
+                raf.seek(currOffset);
+                raf.read(keyBytes);
+                String keyString = new String(keyBytes, Charset.forName("UTF-8"));
+
+                if (valueSize == 0) {
+                    deletedKeys.add(keyString);
+                } else if (!deletedKeys.contains(keyString)) {
+                    byte[] valueBytes = new byte[valueSize];
+                    raf.read(valueBytes);
+                    String value = new String(valueBytes, Charset.forName("UTF-8"));
+                    existingKVs.put(keyString, value);
+                }
+            }
+            return existingKVs;
+        } catch (Exception e) {
+            logger.error("Cannot get all KVDatas in file");
+            return null;
+        } finally {
+            rwLock.readLock().unlock();
+        }
+    }
+
+
 
     // Directly read the file from index using seek, can only be called by get in cache operation
     @Override

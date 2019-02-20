@@ -10,7 +10,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class ECS implements Watcher, IECSClient {
+public class ECS implements IECSClient {
 
     private static Logger logger = Logger.getRootLogger();
 
@@ -77,6 +77,13 @@ public class ECS implements Watcher, IECSClient {
         return true;
     }
 
+
+
+
+
+
+
+
     /**
      * Push the metadata(hash ring content) to ZooKeeper z-node
      */
@@ -99,5 +106,4 @@ public class ECS implements Watcher, IECSClient {
         }
         return true;
     }
-
 }
