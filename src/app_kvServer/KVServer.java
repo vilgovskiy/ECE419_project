@@ -2,30 +2,38 @@ package app_kvServer;
 
 import client.KVStore;
 import ecs.*;
+import ecs.ECS;
 import logger.LogSetup;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Level;
+import org.apache.zookeeper.*;
+import org.apache.zookeeper.Zookeeper;
+import org.apache.zookeeper.data.Stat;
 import server.cache.*;
 import server.storage.*;
 import server.KVClientConnection;
 import shared.messages.JsonMessage;
 import shared.messages.KVMessage;
+import shared.messages.KVAdminMessage;
 
 import java.io.IOException;
 import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.SocketException;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 
-public class KVServer extends Thread implements IKVServer {
+public class KVServer extends Thread implements IKVServer, Watcher {
 
     private static Logger logger = Logger.getRootLogger();
     private static final int maxKeyLength = 20;
     private static final int maxValueLength = 120 * 1024;
 
-    private int port, cacheSize;
+    private int port, cacheSize, zkPort;
     private CacheStrategy strategy;
     private boolean running, stopped, lock_writes;
     private ServerSocket serverSocket;
@@ -34,6 +42,7 @@ public class KVServer extends Thread implements IKVServer {
 	private ECSConsistentHash metadata;
 	private String start, end;
 	private Map<String, String> toDelete;
+	private String zkHost, name, zkPath;
 
 
     /**
@@ -48,7 +57,8 @@ public class KVServer extends Thread implements IKVServer {
      *                  and "LFU".
      */
 
-    public KVServer(int port, int cacheSize, String strategy) {
+    public KVServer(int port, int cacheSize, String strategy, String zkHost,
+					int zkPort, String name) throws IOException {
         this.port = port;
         this.cacheSize = cacheSize;
         this.strategy = CacheStrategy.valueOf(strategy);
@@ -67,9 +77,43 @@ public class KVServer extends Thread implements IKVServer {
 			default:
 		}
 
-		this.metadata = new ECSConsistentHash();
 		this.toDelete = new HashMap<String, String>();
         logger.info("creating an instance of the KV server...");
+
+		// establish connection to Zookeeper host
+		this.zkHost = zkHost;
+		this.zkPort = zkPort;
+		this.name = name;
+		this.zkPath = ECS.ZK_SERVER_ROOT + "/" + name;
+		String zkServer = zkHost + ":" + Integer.toString(zkPort);
+		connectToZookeeper(zkServer);
+
+		// set watch for metadata
+		try {
+			byte[] hashRing = zk.getData(ECS.ZK_METADATA_ROOT, new Watcher() {
+				// update metadata
+				public void process(WatchedEvent we) {
+					try {
+						byte[] hashRing = zk.getData(ECS.ZK_METADATA_ROOT, this, null);
+						String hashRingString = new String(hashRing);
+						metadata = new ECSHashRing(hashRingString);
+					} catch (KeeperException | InterruptedException e) {
+						logger.error("Unable to update the metadata node");
+						e.printStackTrace();
+					}
+				}
+			}, null);
+
+			String hashRingString = new String(hashRingData);
+			this.metadata = new ECSHashRing(hashRingString);
+
+		} catch (InterruptedException | KeeperException e) {
+			logger.debug("Unable to get metadata info");
+			e.printStackTrace();
+		}
+
+		// set watch for all other messages to this server
+		zk.getChildren(zkPath, this, null);
     }
 
     @Override
@@ -349,16 +393,19 @@ public class KVServer extends Thread implements IKVServer {
 
 	@Override
 	public void rejectClientRequests() {
+		logger.info("This server is now blocking client requests");
 		stopped = true;
 	}
 
 	@Override
 	public void acceptClientRequests() {
+		logger.info("This server is now processing client requests");
 		stopped = false;
 	}
 
 	@Override
 	public void lockWrite() {
+		logger.info("Write operations have been locked");
 		lock_writes = true;
 
 		// TODO Consider cases where there might be threads still writing or
@@ -369,6 +416,7 @@ public class KVServer extends Thread implements IKVServer {
 	public void unlockWrite() {
 		// Delete keys that were transferred
 		deleteTransferredKeys();
+		logger.info("Write operations have been unlocked");
 		lock_writes = false;
 
 	}
@@ -396,7 +444,99 @@ public class KVServer extends Thread implements IKVServer {
 		return this.running;
 	}
 
-    /**
+	private void connectToZookeeper(String zkServer) throws IOException {
+		CountDownLatch latch = new CountDownLatch(1);
+		zk = new Zookeeper(zkServer, ECS.ZK_TIMEOUT, new Watcher() {
+			public void process(WatchedEvent event) {
+				if (event.getState().equals(Event.KeeperState.SyncConnected)) {
+					latch.countDown();
+				}
+			}
+		});
+
+		try {
+			// wait until we are connected
+			latch.await();
+		} catch (InterruptedException e) {
+			logger.error("Error encountered while connecting to zookeeper: "
+						+ e.getMessage());
+		}
+	}
+
+	/* Process all messages from ECS to KVServer using zookeeper */
+	@Override
+	private void process(WatchedEvent event) {
+		List<String> children;
+
+		try {
+			children = zk.getChildren(zkPath, false, null);
+			String path = zkPath + "/" + children.get(0);
+
+			if (children.isEmpty()) {
+				// no message to process, just re-register watch
+				zk.getChildren(zkPath, this, null);
+			} else if (children.size() > 1) {
+				String errorMsg = (name + " expects only one message, received "
+									+ children.size());
+				logger.error(errorMsg);
+				zk.setData(path, errorMsg.getBytes(),
+						   ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+			} else {
+				byte[] data = zk.getData(path, false, null);
+				KVAdminMessage msg = new KVAdminMessage();
+				String json = new String(data);
+				msg.deserialize(json);
+
+				switch (msg.getStatus()) {
+					case START:
+						acceptClientRequests();
+						zk.delete(path, zk.exists(path, false).getVersion());
+						break;
+					case STOP:
+						rejectClientRequests();
+						zk.delete(path, zk.exists(path, false).getVersion());
+						break;
+					case SHUT_DOWN:
+						rejectClientRequests();
+						zk.delete(path, zk.exists(path, false).getVersion());
+						close();
+						break;
+					case LOCK_WRITE:
+						lockWrite();
+						zk.delete(path, zk.exists(path, false).getVersion());
+						break;
+					case UNLOCK_WRITE:
+						unlockWrite();
+						zk.delete(path, zk.exists(path, false).getVersion());
+						break;
+					case MOVE_DATA:
+						ArrayList<String> args = msg.getArgs();
+
+						if (args.size() != 4) {
+							String errorMsg = ("Incorrect number of args "
+											   + "sent to MOVE_DATA command");
+							zk.setData(path, errorMsg.getBytes(),
+									   ZooDefs.Ids.OPEN_ACL_UNSAFE,
+									   CreateMode.PERSISTENT);
+						} else {
+							moveData(args.get(0), args.get(1), args.get(2),
+									Integer.parseInt(args.get(3)));
+						}
+						break;
+
+				}
+
+				// re-register watch
+				if (isRunning()) {
+					zk.getChildren(zkPath, this, null);
+				}
+			}
+		} catch (KeeperException | InterruptedException e) {
+            logger.error("Unable to process the watcher event");
+        }
+	}
+
+	/**
      * Helper function that checks all argument types and if they are vcalid
      *
      * @param port integer signifies port server is listening on
@@ -438,16 +578,21 @@ public class KVServer extends Thread implements IKVServer {
         try {
 			new LogSetup("logs/server.log", Level.ALL);
 
-            if (args.length != 3) {
+            if (args.length != 6) {
                 System.out.println("Error! Invalid number of arguments!");
-                System.out.println("Usage: KVServer <port> <cahche size> <caching strategy>!");
+                System.out.println("Usage: KVServer <port> <cache size> " +
+									"<caching strategy> <zkHost> <zkPort> " +
+									"<name>!");
             } else if (argsAreOkay(args[0], args[1], args[2])) {
 
                 int port = Integer.parseInt(args[0]);
                 int cacheSize = Integer.parseInt(args[1]);
                 String strategy = args[2];
+				String zkHost = args[3];
+				int zkPort = Integer.parseInt(args[4]);
+				String name = args[5];
 
-                new KVServer(port, cacheSize, strategy).start();
+                new KVServer(port, cacheSize, strategy, zkHost, zkPort, name).start();
             }
         } catch (NumberFormatException nfe) {
             System.out.println("Error! Invalid argument <port> or <cache_size>! Not a number!");

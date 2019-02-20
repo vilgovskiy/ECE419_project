@@ -69,8 +69,16 @@ public class ECSCommunication implements Watcher {
 			case NodeDataChanged:
 				// expected message node to be deleted,
 				// but instead node value changed, log error
-				logger.error("Message not consumed by node at path "
-							+ event.getPath());
+				String error;
+				try {
+					error = new String(zk.getData(event.getPath(), false, null));
+					logger.error(error);
+				} catch (KeeperException | InterruptedException e) {
+					logger.error("Error processing message, but error message "
+								+ "could not be received");
+				}
+
+				zk.delete(event.getPath(), zk.exists(event.getPath(), false).getVersion());
 				break;
 			default:
 				logger.error("Unexpected type received: " + event.getType()
