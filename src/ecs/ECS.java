@@ -77,12 +77,9 @@ public class ECS implements Watcher, IECSClient {
         return true;
     }
 
-
-
-
-
-
-
+	public static String getNodePath(ECSNode node) {
+		return ZK_SERVER_ROOT + "/" + node.getNodeName();
+	}
 
     /**
      * Push the metadata(hash ring content) to ZooKeeper z-node
