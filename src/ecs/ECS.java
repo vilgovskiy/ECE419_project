@@ -367,9 +367,21 @@ public class ECS implements IECSClient {
         args.add(dstHost);
         args.add(dstPort);
 
-        ECSCommunication broadcaster = new ECSCommunication(zk, toTransfer);
-        KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.MOVE_DATA, args);
-        broadcaster.broadcast(adminMsg);
+        // broadcast the lock write message
+        ECSCommunication writeLock = new ECSCommunication(zk, toTransfer);
+        KVAdminMessage adminMsg1 = new KVAdminMessage(KVAdminMessage.Status.LOCK_WRITE);
+        writeLock.broadcast(adminMsg1);
+
+        // broadcast the move data message
+        ECSCommunication moveData = new ECSCommunication(zk, toTransfer);
+        KVAdminMessage adminMsg2 = new KVAdminMessage(KVAdminMessage.Status.MOVE_DATA, args);
+        moveData.broadcast(adminMsg2);
+
+        // broadcast the unlock write message
+        ECSCommunication writeUnlock = new ECSCommunication(zk, toTransfer);
+        KVAdminMessage adminMsg3 = new KVAdminMessage(KVAdminMessage.Status.UNLOCK_WRITE);
+        writeLock.broadcast(adminMsg3);
+
         return true;
     }
 }
