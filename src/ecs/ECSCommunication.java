@@ -15,13 +15,13 @@ import static ecs.ECS.ZK_TIMEOUT;
 
 public class ECSCommunication implements Watcher {
 	private static Logger logger = Logger.getRootLogger();
-	private Zookeeper zk;
+	private ZooKeeper zk;
 	private CountDownLatch latch;
 
 	private Collection<ECSNode> nodes;
 	private static long msgNum = 0;
 
-	public ECSCommunication(Zookeeper zk, Collection<ECSNode> nodes)  {
+	public ECSCommunication(ZooKeeper zk, Collection<ECSNode> nodes)  {
 		this.zk = zk;
 		this.nodes = nodes;
 		this.latch = new CountDownLatch(nodes.size());
@@ -34,7 +34,7 @@ public class ECSCommunication implements Watcher {
 	 */
 	public void broadcast(KVAdminMessage msg) {
 		for (ECSNode n : nodes) {
-			String msgPath = ECS.getNodePath(n) + "/message" + msgNum;
+			String msgPath = ECS.getZKNodePath(n) + "/message" + msgNum;
 			msgNum++;
 
 			try {
@@ -47,14 +47,19 @@ public class ECSCommunication implements Watcher {
 					// message has been consumed by a KVServer
 					latch.countDown();
 				}
-			} catch (KeeperException e) {
+			} catch (KeeperException | InterruptedException e) {
 				logger.error("Could not create message node in path " + msgPath
 							+ " : " + e.getMessage());
 			}
 		}
 
 		// wait until message has been received by all KVServer nodes
-		latch.await(ZK_TIMEOUT, TimeUnit.MILLISECONDS);
+		try {
+			latch.await(ZK_TIMEOUT, TimeUnit.MILLISECONDS);
+		} catch (InterruptedException e) {
+			logger.error("Interrupted exception while waiting message to be received by all KVServer");
+		}
+
 	}
 
 	@Override
@@ -73,12 +78,11 @@ public class ECSCommunication implements Watcher {
 				try {
 					error = new String(zk.getData(event.getPath(), false, null));
 					logger.error(error);
+					zk.delete(event.getPath(), zk.exists(event.getPath(), false).getVersion());
 				} catch (KeeperException | InterruptedException e) {
 					logger.error("Error processing message, but error message "
 								+ "could not be received");
 				}
-
-				zk.delete(event.getPath(), zk.exists(event.getPath(), false).getVersion());
 				break;
 			default:
 				logger.error("Unexpected type received: " + event.getType()
