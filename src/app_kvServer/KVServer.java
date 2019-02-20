@@ -7,7 +7,6 @@ import logger.LogSetup;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Level;
 import org.apache.zookeeper.*;
-import org.apache.zookeeper.Zookeeper;
 import org.apache.zookeeper.data.Stat;
 import server.cache.*;
 import server.storage.*;
@@ -104,7 +103,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 				}
 			}, null);
 
-			String hashRingString = new String(hashRingData);
+			String hashRingString = new String(hashRing);
 			this.metadata = new ECSConsistentHash(hashRingString);
 
 		} catch (InterruptedException | KeeperException e) {
@@ -465,7 +464,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
 	/* Process all messages from ECS to KVServer using zookeeper */
 	@Override
-	private void process(WatchedEvent event) {
+	public void process(WatchedEvent event) {
 		List<String> children;
 
 		try {
