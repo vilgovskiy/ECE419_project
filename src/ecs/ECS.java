@@ -356,6 +356,20 @@ public class ECS implements IECSClient {
     }
 
     private boolean transferData(IECSNode src, IECSNode dst, String[] nodeHashRange) {
+        String dstHost = dst.getNodeHost();
+        String dstPort = String.valueOf(dst.getNodePort());
+        Collection<IECSNode> toTransfer = new ArrayList<>();
+
+        toTransfer.add(src);
+        ArrayList<String> args = new ArrayList<>();
+        args.add(nodeHashRange[0]);
+        args.add(nodeHashRange[1]);
+        args.add(dstHost);
+        args.add(dstPort);
+
+        ECSCommunication broadcaster = new ECSCommunication(zk, toTransfer);
+        KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.MOVE_DATA, args);
+        broadcaster.broadcast(adminMsg);
         return true;
     }
 }

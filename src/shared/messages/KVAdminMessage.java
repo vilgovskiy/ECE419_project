@@ -23,6 +23,11 @@ public class KVAdminMessage implements SerializeDeserializable {
 		this.status = status;
 	}
 
+	public KVAdminMessage(Status status, ArrayList<String> args) {
+		this.status = status;
+		this.args = args;
+	}
+
 	/* Get the status */
 	public Status getStatus() {
 		return status;
