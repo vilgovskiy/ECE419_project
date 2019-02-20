@@ -1,8 +1,9 @@
 package shared.messages;
 
 import java.util.ArrayList;
+import com.google.gson.Gson;
 
-public interface KVAdminMessage {
+public class KVAdminMessage implements SerializeDeserializable {
 
 	public enum Status {
 		START, /* start processing client requests */
@@ -23,17 +24,36 @@ public interface KVAdminMessage {
 		MOVE_DATA, /* transfer data between servers */
 		MOVE_DATA_SUCCESS,
 		MOVE_DATA_ERROR,
-		UPDATE_METADATA /* update the metadata */
+		UPDATE_METADATA, /* update the metadata */
 		UPDATE_METADATA_SUCCESS,
 		UPDATE_METADATA_ERROR
 	}
 
+	private Status status;
+
+	public KVAdminMessage(Status status) {
+		this.status = status;
+	}
+
 	/* Get the status */
-	public Status getStatus();
+	public Status getStatus() {
+		return status;
+	}
 
 	/* Setter for the status field */
-	public void getStatus();
+	public void setStatus(Status status) {
+		this.status = status;
+	}
 
 	/* Get the args passed into the command */
-	public ArrayList<String> getArgs();
+	//public ArrayList<String> getArgs();
+
+	public String serialize() {
+		return new Gson().toJson(this);
+	}
+
+	public void deserialize(String jsonData) {
+		KVAdminMessage msg = new Gson().fromJson(jsonData, this.getClass());
+		this.status = msg.status;
+	}
 }

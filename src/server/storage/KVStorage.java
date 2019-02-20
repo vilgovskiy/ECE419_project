@@ -143,7 +143,7 @@ public class KVStorage implements IKVStorage {
                 raf.read(keyBytes);
                 String keyString = new String(keyBytes, Charset.forName("UTF-8"));
 
-                // if we 
+                // if we
                 if (valueSize == 0 && !existingKVs.containsKey(keyString)) {
                     deletedKeys.add(keyString);
                 } else if (!deletedKeys.contains(keyString) && !existingKVs.containsKey(keyString)) {

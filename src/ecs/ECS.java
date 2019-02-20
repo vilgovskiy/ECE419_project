@@ -10,7 +10,7 @@ import java.io.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class ECS implements IECSClient {
+public class ECS implements Watcher, IECSClient {
 
     private static Logger logger = Logger.getRootLogger();
 
