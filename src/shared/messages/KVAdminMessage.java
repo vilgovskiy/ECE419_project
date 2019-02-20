@@ -27,7 +27,7 @@ public class KVAdminMessage implements SerializeDeserializable {
 		UPDATE_METADATA, /* update the metadata */
 		UPDATE_METADATA_SUCCESS,
 		UPDATE_METADATA_ERROR
-	}
+	};
 
 	private Status status;
 

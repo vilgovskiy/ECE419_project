@@ -1,5 +1,6 @@
 package app_kvServer;
 
+import client.KVStore;
 import ecs.*;
 import logger.LogSetup;
 import org.apache.log4j.Logger;
@@ -15,6 +16,8 @@ import java.net.BindException;
 import java.net.ServerSocket;
 import java.net.SocketException;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 public class KVServer extends Thread implements IKVServer {
 
@@ -30,6 +33,7 @@ public class KVServer extends Thread implements IKVServer {
 	private Cache cache;
 	private ECSConsistentHash metadata;
 	private String start, end;
+	private Map<String, String> toDelete;
 
 
     /**
@@ -64,6 +68,7 @@ public class KVServer extends Thread implements IKVServer {
 		}
 
 		this.metadata = new ECSConsistentHash();
+		this.toDelete = new HashMap<String, String>();
         logger.info("creating an instance of the KV server...");
     }
 
@@ -243,6 +248,7 @@ public class KVServer extends Thread implements IKVServer {
     public void close() {
         kill();
         clearCache();
+		deleteTransferredKeys();
     }
 
     private boolean initializeKVServer() {
@@ -281,29 +287,7 @@ public class KVServer extends Thread implements IKVServer {
 		return lock_writes;
 	}
 
-	public void rejectClientRequests() {
-		stopped = true;
-	}
-
-	public void acceptClientRequests() {
-		stopped = false;
-	}
-
-	public void lockWrite() {
-		lock_writes = true;
-
-		// TODO Consider cases where there might be threads still writing or
-		// waiting to write to storage
-	}
-
-	public void unlockWrite() {
-		lock_writes = false;
-	}
-
-	public void moveData(String start, String end, String address, String port) {
-		// TODO
-	}
-
+	@Override
 	public void updateMetadata(String json) {
 		// update metadata
 		this.metadata.updateConsistentHash(json);
@@ -317,9 +301,89 @@ public class KVServer extends Thread implements IKVServer {
 
 	}
 
+	@Override
+	public void moveData(String start, String end, String address, int port) {
+		Map<String, String> allKVData = new HashMap<String, String>();
+
+		try {
+			allKVData = storage.getAllKVData();
+		} catch (Exception e) {
+			logger.error("Could not get all KV Pairs from storage");
+
+			//TODO : send back error message to ECS
+		}
+
+		KVStore store = new KVStore(address, port);
+
+		// try to connect to the server
+		try {
+			store.connect();
+		} catch (Exception e) {
+			logger.error("Could not connect to " + address + ":" + port + "to transfer data");
+
+			//TODO : send back error message to ECS
+		}
+
+		for (Map.Entry<String, String> entry : allKVData.entrySet()) {
+			String key = entry.getKey();
+			String value = entry.getValue();
+			String hashedKey = ECSNode.calculateHash(key);
+
+			if (hashedKey.compareTo(start) >= 0 && hashedKey.compareTo(end) < 0) {
+				// add to map of KV pairs to be deleted later
+				this.toDelete.put(key, value);
+
+				// send data to the server
+				try {
+					store.put(key, value);
+				} catch (Exception e) {
+					logger.error("Could not send <" + key + "," + value + "> to " + address + ":" + port);
+
+					// TODO : send back error message to ECS
+				}
+			}
+		}
+
+		store.disconnect();
+	}
+
+	@Override
+	public void rejectClientRequests() {
+		stopped = true;
+	}
+
+	@Override
+	public void acceptClientRequests() {
+		stopped = false;
+	}
+
+	@Override
+	public void lockWrite() {
+		lock_writes = true;
+
+		// TODO Consider cases where there might be threads still writing or
+		// waiting to write to storage
+	}
+
+	@Override
+	public void unlockWrite() {
+		// Delete keys that were transferred
+		deleteTransferredKeys();
+		lock_writes = false;
+
+	}
+
 	public synchronized void setRange(String[] range) {
 		this.start = range[0];
 		this.end = range[1];
+	}
+
+	private void deleteTransferredKeys() {
+		for (String key : toDelete.keySet()) {
+			putKV(key, "");
+		}
+
+		toDelete.clear();
 	}
 
 	private boolean checkValidKeyValue(String key, String value) {

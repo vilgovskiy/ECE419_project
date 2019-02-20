@@ -1,5 +1,7 @@
 package server.storage;
 
+import java.util.Map;
+
 public interface IKVStorage {
 
     void write(KVData kvData) throws Exception;
@@ -9,5 +11,7 @@ public interface IKVStorage {
     boolean checkIfKeyExists(String key) throws Exception;
 
     void clearStorage();
+
+	public Map<String, String> getAllKVData() throws Exception;
 
 }

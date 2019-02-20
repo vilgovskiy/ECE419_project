@@ -109,4 +109,39 @@ public interface IKVServer {
 	 * Get the metadata from the server
 	 */
 	public ECSConsistentHash getMetadata();
+
+	/**
+	 * Update the metadata of the server
+	 * @param json the metadata encoded in json
+	 */
+	public void updateMetadata(String json);
+
+	/**
+	 * Move all key value pairs within the given range to server
+	 * @param start the start of the range
+	 * @param end the end of the range (non-inclusive)
+	 * @param address the address of the server
+	 * @param port port number the server is listening on
+	 */
+	public void moveData(String start, String end, String address, int port);
+
+	/**
+	 * Stop processing client requests
+	 */
+	public void rejectClientRequests();
+
+	/**
+	 * Start processing client requests
+	 */
+	public void acceptClientRequests();
+
+	/**
+	 * Lock the server from write operations
+	 */
+	public void lockWrite();
+
+	/**
+	 * Unlock the server from write operations
+	 */
+	public void unlockWrite();
 }
