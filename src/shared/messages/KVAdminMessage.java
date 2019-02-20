@@ -30,6 +30,7 @@ public class KVAdminMessage implements SerializeDeserializable {
 	};
 
 	private Status status;
+	private ArrayList<String> args;
 
 	public KVAdminMessage(Status status) {
 		this.status = status;
@@ -46,7 +47,9 @@ public class KVAdminMessage implements SerializeDeserializable {
 	}
 
 	/* Get the args passed into the command */
-	//public ArrayList<String> getArgs();
+	public ArrayList<String> getArgs() {
+		return args;
+	}
 
 	public String serialize() {
 		return new Gson().toJson(this);
@@ -55,5 +58,6 @@ public class KVAdminMessage implements SerializeDeserializable {
 	public void deserialize(String jsonData) {
 		KVAdminMessage msg = new Gson().fromJson(jsonData, this.getClass());
 		this.status = msg.status;
+		this.args = msg.args;
 	}
 }
