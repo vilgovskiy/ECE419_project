@@ -20,8 +20,13 @@ public class JsonAdminMessage implements KVAdminMessage, SerializeDeserializable
         return status;
     }
 
+	@Override
+	public ArrayList<String> getArgs() {
+		return args;
+	}
+
     @Override
-    public void setStatus(StatusType status) {
+    public void setStatus(Status status) {
         this.status = status;
     }
 
@@ -32,7 +37,7 @@ public class JsonAdminMessage implements KVAdminMessage, SerializeDeserializable
 
     @Override
     public void deserialize(String jsonData) {
-			JsonMessage json = new Gson().fromJson(jsonData, this.getClass());
+			JsonAdminMessage json = new Gson().fromJson(jsonData, this.getClass());
 			this.status = json.status;
         	this.args = json.args;
     }

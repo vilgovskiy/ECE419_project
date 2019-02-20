@@ -23,16 +23,16 @@ public interface KVAdminMessage {
 		MOVE_DATA, /* transfer data between servers */
 		MOVE_DATA_SUCCESS,
 		MOVE_DATA_ERROR,
-		UPDATE_METADATA /* update the metadata */
+		UPDATE_METADATA, /* update the metadata */
 		UPDATE_METADATA_SUCCESS,
 		UPDATE_METADATA_ERROR
-	}
+	};
 
 	/* Get the status */
 	public Status getStatus();
 
 	/* Setter for the status field */
-	public void getStatus();
+	public void setStatus(Status status);
 
 	/* Get the args passed into the command */
 	public ArrayList<String> getArgs();
