@@ -112,7 +112,7 @@ public class ECSConsistentHash {
             // if keyHash == node's Hash, then return since it's inclusive
             return currNode;
         } else {
-            return (ECSNode) ring.get(currNode.getPrevNode());
+            return (ECSNode) ring.get(currNode.getNodeHash());
         }
     }
 

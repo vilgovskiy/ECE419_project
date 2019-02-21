@@ -11,6 +11,7 @@ import shared.messages.KVMessage;
 public class KVServerTest extends TestCase {
 
     private KVServer server;
+    private KVServer server2;
     private ECSNode node;
     private ECSConsistentHash metadata;
     private KVStore store;
@@ -20,12 +21,15 @@ public class KVServerTest extends TestCase {
         server = new KVServer(5000, 20, "FIFO");
         server.start();
 
-        String host = "127.0.0.1";
+        server2 = new KVServer(5001, 20, "FIFO");
+        server2.start();
+
+        String host = "0.0.0.0";
         int port = 5000;
         store = new KVStore(host, port);
 
-        node = new ECSNode("testServer", host, port);
-        ECSNode node2 = new ECSNode("testServer1", host, 5001);
+        node = new ECSNode("testServer1", host, port);
+        ECSNode node2 = new ECSNode("testServer2", host, 5001);
         metadata = new ECSConsistentHash();
         metadata.addNode(node);
         metadata.addNode(node2);
@@ -34,6 +38,9 @@ public class KVServerTest extends TestCase {
     public void tearDown() {
         server.clearStorage();
         server.close();
+
+        server2.clearStorage();
+        server2.close();
     }
 
     @Test
@@ -42,8 +49,8 @@ public class KVServerTest extends TestCase {
         server.updateMetadata(json);
         String[] range = server.getRange();
 
-        String start = "E73EB7EDC6B16F4BFDBFE7BD78F9AC14";
-        String end = "73909F8C96A9D08E876411C0A212A1F4";
+        String start = "47222EE0B7472F2B2AA4AB0E5503A9FA";
+        String end = "B8552F6FD5AD33211D43169CD9A2A20C";
 
         assertEquals(start, range[0]);
         assertEquals(end, range[1]);
@@ -54,7 +61,8 @@ public class KVServerTest extends TestCase {
     public void testCheckRange() {
         String json = metadata.serializeHash();
         server.updateMetadata(json);
-        String hashedKey = "F3909F8C96A9D08E876411C0A212A1F4";
+
+        String hashedKey = "A3909F8C96A9D08E876411C0A212A1F4";
         assertTrue(server.inServerKeyRange(hashedKey));
     }
 
@@ -107,13 +115,13 @@ public class KVServerTest extends TestCase {
     }
 
     @Test
-    public void testServerResponsible() {
+    public void testServerNotResponsible() {
         String json = metadata.serializeHash();
         server.updateMetadata(json);
 
         // server is responsible for range
-        // e73eb7edc6b16f4bfdbfe7bd78f9ac14 (hash of 127.0.0.1:5000) to
-        // 73909f8c96a9d08e876411c0a212a1f4 (hash of 127.0.0.1:5001)
+        // 47222EE0B7472F2B2AA4AB0E5503A9FA (hash of 0.0.0.1:5000) to
+        // B8552F6FD5AD33211D43169CD9A2A20C (hash of 0.0.0.1:5001)
         try {
             store.connect();
 
