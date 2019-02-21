@@ -28,7 +28,7 @@ public class ECS implements IECSClient {
 
     public static final String ZK_METADATA_PATH = "/metadata";
     public static final String ZK_SERVER_ROOT = "/kv_servers";
-    public static final String SERVER_JAR_PATH = "KVServer.jar";
+    public static final String SERVER_JAR_PATH = "ms2-server.jar";
 
     // Set of all servers available in the system through config file
     private Queue<IECSNode> nodePool = new ConcurrentLinkedQueue<>();
