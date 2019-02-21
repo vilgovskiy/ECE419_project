@@ -60,6 +60,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         this.port = port;
         this.cacheSize = cacheSize;
         this.strategy = CacheStrategy.valueOf(strategy);
+		this.metadata = new ECSConsistentHash();
         if (storage == null ) storage = KVStorage.getInstance();
 
         switch (this.strategy) {
@@ -82,7 +83,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 					String name, String zkHost, int zkPort) throws IOException {
     	this(port, cacheSize, strategy);
 		this.toDelete = new HashMap<>();
-		this.metadata = new ECSConsistentHash();
 
 		// establish connection to Zookeeper hos
 		this.zkHost = zkHost;
@@ -335,14 +335,37 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		return lock_writes;
 	}
 
-	private void updateMetadata(String json) {
+	public void updateMetadata(String json) {
 		// update metadata
 		this.metadata.updateConsistentHash(json);
 
 		// update the range this server is responsible for
 		String key = getHostname() + ":" + getPort();
-		IECSNode n = this.metadata.getNodeByKeyHash(key);
+		String hashedKey = ECSNode.calculateHash(key);
+		IECSNode n = this.metadata.getNodeByKeyHash(hashedKey);
 		this.setRange(n.getNodeHashRange());
+	}
+
+	private synchronized void setRange(String[] range) {
+		this.start = range[0];
+		this.end = range[1];
+	}
+
+	public synchronized String[] getRange() {
+    	return new String[] {start, end};
+	}
+
+	public void lockWrite() {
+		logger.info("Write operations have been locked");
+		lock_writes = true;
+	}
+
+	public void unlockWrite() {
+		// Delete keys that were transferred
+		deleteTransferredKeys();
+		logger.info("Write operations have been unlocked");
+		lock_writes = false;
+
 	}
 
 	private void moveData(String start, String end, String address, int port) {
@@ -392,24 +415,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	private void acceptClientRequests() {
 		logger.info("This server is now processing client requests");
 		stopped = false;
-	}
-
-	private void lockWrite() {
-		logger.info("Write operations have been locked");
-		lock_writes = true;
-	}
-
-	private void unlockWrite() {
-		// Delete keys that were transferred
-		deleteTransferredKeys();
-		logger.info("Write operations have been unlocked");
-		lock_writes = false;
-
-	}
-
-	private synchronized void setRange(String[] range) {
-		this.start = range[0];
-		this.end = range[1];
 	}
 
 	private void deleteTransferredKeys() {
