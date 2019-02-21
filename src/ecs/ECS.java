@@ -183,6 +183,8 @@ public class ECS implements IECSClient {
             String command = "java -jar " +
                     SERVER_JAR_PATH + " " +
                     node.getNodePort() + " " +
+                    cacheSize + " " +
+                    cacheStrategy + " " +
                     node.getNodeName() + " " +
                     ZK_IP + " " +
                     ZK_PORT;
@@ -388,7 +390,7 @@ public class ECS implements IECSClient {
         // broadcast the unlock write message
         ECSCommunication writeUnlock = new ECSCommunication(zk, toTransfer);
         KVAdminMessage adminMsg3 = new KVAdminMessage(KVAdminMessage.Status.UNLOCK_WRITE);
-        writeLock.broadcast(adminMsg3);
+        writeUnlock.broadcast(adminMsg3);
 
         return true;
     }
