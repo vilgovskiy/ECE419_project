@@ -72,6 +72,7 @@ public class JsonMessage implements KVMessage, SerializeDeserializable {
 			this.status = json.status;
         	this.key = json.key;
         	this.value = json.value;
+        	this.metadata = json.metadata;
     }
 
     @Override
