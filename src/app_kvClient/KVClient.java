@@ -5,6 +5,7 @@ import java.io.InputStreamReader;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
+import org.apache.zookeeper.*;
 import logger.LogSetup;
 
 import java.io.IOException;

@@ -7,7 +7,6 @@ import logger.LogSetup;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Level;
 import org.apache.zookeeper.*;
-import org.apache.zookeeper.data.Stat;
 import server.cache.*;
 import server.storage.*;
 import server.KVClientConnection;
@@ -42,6 +41,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	private String start, end;
 	private Map<String, String> toDelete;
 	private String zkHost, name, zkPath;
+	private ZooKeeper zk;
 
 
     /**
@@ -84,7 +84,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     	this(port, cacheSize, strategy);
 		this.toDelete = new HashMap<>();
 
-		// establish connection to Zookeeper hos
+		// establish connection to Zookeeper host
 		this.zkHost = zkHost;
 		this.zkPort = zkPort;
 		this.name = name;
@@ -94,11 +94,11 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
 		// set watch for metadata
 		try {
-			byte[] hashRing = zk.getData(ECS.ZK_METADATA_ROOT, new Watcher() {
+			byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, new Watcher() {
 				// update metadata
 				public void process(WatchedEvent we) {
 					try {
-						byte[] hashRing = zk.getData(ECS.ZK_METADATA_ROOT, this, null);
+						byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, this, null);
 						String json = new String(hashRing);
 						updateMetadata(json);
 					} catch (KeeperException | InterruptedException e) {
@@ -117,7 +117,12 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		}
 
 		// set watch for all other messages to this server
-		zk.getChildren(zkPath, this, null);
+		try {
+			zk.getChildren(zkPath, this, null);
+		} catch (InterruptedException | KeeperException e) {
+			logger.error("Cannot set watch on path " + zkPath);
+		}
+
 	}
 
     @Override
@@ -437,7 +442,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
 	private void connectToZookeeper(String zkServer) throws IOException {
 		CountDownLatch latch = new CountDownLatch(1);
-		zk = new Zookeeper(zkServer, ECS.ZK_TIMEOUT, new Watcher() {
+		zk = new ZooKeeper(zkServer, ECS.ZK_TIMEOUT, new Watcher() {
 			public void process(WatchedEvent event) {
 				if (event.getState().equals(Event.KeeperState.SyncConnected)) {
 					latch.countDown();
@@ -470,8 +475,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 				String errorMsg = (name + " expects only one message, received "
 									+ children.size());
 				logger.error(errorMsg);
-				zk.setData(path, errorMsg.getBytes(),
-						   ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+				zk.setData(path, errorMsg.getBytes(), zk.exists(path, false).getVersion());
 			} else {
 				byte[] data = zk.getData(path, false, null);
 				KVAdminMessage msg = new KVAdminMessage();
@@ -506,9 +510,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 						if (args.size() != 4) {
 							String errorMsg = ("Incorrect number of args "
 											   + "sent to MOVE_DATA command");
-							zk.setData(path, errorMsg.getBytes(),
-									   ZooDefs.Ids.OPEN_ACL_UNSAFE,
-									   CreateMode.PERSISTENT);
+							zk.setData(path, errorMsg.getBytes(), zk.exists(path, false).getVersion());
 						} else {
 							moveData(args.get(0), args.get(1), args.get(2),
 									Integer.parseInt(args.get(3)));
