@@ -94,16 +94,26 @@ public class ECSConsistentHash {
 
     public ECSNode getNodeByKeyHash(String keyHash){
         // get the node that has hashValue larger or equal than keyHash
-        String upperBound = ring.tailMap(keyHash).firstKey();
+        SortedMap<String, IECSNode> greaterThanOrEq = ring.tailMap(keyHash);
+        String upperBound;
+
+        if (greaterThanOrEq.isEmpty())  {
+            // if the hashed value is greater than all hash values, loop back to start
+            upperBound = ring.firstKey();
+        } else {
+            upperBound = greaterThanOrEq.firstKey();
+        }
         ECSNode currNode = (ECSNode) ring.get(upperBound);
 
-        // if keyHash == node's Hash, then return since it's inclusive
-        if (upperBound.compareTo(keyHash) == 0) return currNode;
-        // else get a previous node
-        else if (upperBound.compareTo(keyHash) > 0) {
-            currNode = (ECSNode) ring.get(currNode.getPrevNode());
+        if (ring.size() == 1) {
+            // only one node in hash ring, return it
+            return currNode;
+        } else if (upperBound.compareTo(keyHash) == 0) {
+            // if keyHash == node's Hash, then return since it's inclusive
+            return currNode;
+        } else {
+            return (ECSNode) ring.get(currNode.getPrevNode());
         }
-        return currNode;
     }
 
 

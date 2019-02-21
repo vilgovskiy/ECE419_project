@@ -76,13 +76,22 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 			default:
 		}
 
+		// non distributed case
+		stopped = false;
+		lock_writes = false;
+        start = "00000000000000000000000000000000";
+        end = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+        toDelete = new HashMap<>();
+
         logger.info("creating an instance of the KV server...");
     }
 
     public KVServer(int port, int cacheSize, String strategy,
 					String name, String zkHost, int zkPort) throws IOException {
     	this(port, cacheSize, strategy);
-		this.toDelete = new HashMap<>();
+
+		// on init, block all client requests
+		stopped = true;
 
 		// establish connection to Zookeeper host
 		this.zkHost = zkHost;
@@ -308,7 +317,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         logger.info("Starting KVServer...");
         try {
             serverSocket = new ServerSocket(port);
-			stopped = true; // on init, only respond to ECS
             logger.info("Server listening on the port " + serverSocket.getLocalPort());
             return true;
         } catch (IOException e) {
@@ -327,7 +335,13 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
 	@Override
 	public synchronized boolean inServerKeyRange(String key) {
-		return key.compareTo(start) >= 0 && key.compareTo(end) < 0;
+    	if (start.compareTo(end) < 0) {
+			return key.compareTo(start) >= 0 && key.compareTo(end) < 0;
+		} else {
+    		// case where the range wraps around the ring
+			return key.compareTo(start) >= 0 || key.compareTo(end) < 0;
+		}
+
 	}
 
 	@Override
@@ -373,6 +387,16 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
 	}
 
+	public void rejectClientRequests() {
+		logger.info("This server is now blocking client requests");
+		stopped = true;
+	}
+
+	public void acceptClientRequests() {
+		logger.info("This server is now processing client requests");
+		stopped = false;
+	}
+
 	private void moveData(String start, String end, String address, int port) {
 		Map<String, String> allKVData = new HashMap<String, String>();
 
@@ -412,22 +436,14 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		store.disconnect();
 	}
 
-	private void rejectClientRequests() {
-		logger.info("This server is now blocking client requests");
-		stopped = true;
-	}
-
-	private void acceptClientRequests() {
-		logger.info("This server is now processing client requests");
-		stopped = false;
-	}
-
 	private void deleteTransferredKeys() {
-		for (String key : toDelete.keySet()) {
-			putKV(key, "");
-		}
+    	if (toDelete.size() > 0) {
+			for (String key : toDelete.keySet()) {
+				putKV(key, "");
+			}
 
-		toDelete.clear();
+			toDelete.clear();
+		}
 	}
 
 	private boolean checkValidKeyValue(String key, String value) {
