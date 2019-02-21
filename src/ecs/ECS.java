@@ -51,7 +51,7 @@ public class ECS implements IECSClient {
             nodePool.add(node);
         }
 
-        CountDownLatch connSignal = new CountDownLatch(0);
+        final CountDownLatch connSignal = new CountDownLatch(0);
         zk = new ZooKeeper(ZK_IP + ":" + ZK_PORT, ZK_TIMEOUT, new Watcher() {
             public void process(WatchedEvent event) {
                 if (event.getState() == Watcher.Event.KeeperState.SyncConnected) {

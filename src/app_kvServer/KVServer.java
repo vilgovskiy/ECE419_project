@@ -441,7 +441,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	}
 
 	private void connectToZookeeper(String zkServer) throws IOException {
-		CountDownLatch latch = new CountDownLatch(1);
+		final CountDownLatch latch = new CountDownLatch(1);
 		zk = new ZooKeeper(zkServer, ECS.ZK_TIMEOUT, new Watcher() {
 			public void process(WatchedEvent event) {
 				if (event.getState().equals(Event.KeeperState.SyncConnected)) {
