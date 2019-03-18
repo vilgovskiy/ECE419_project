@@ -42,30 +42,31 @@ public class ECS implements IECSClient {
 
     public ECS(String configFile) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(new File(configFile)));
-
         String cur;
 
-        while((cur = br.readLine()) != null){
+        while((cur = br.readLine()) != null) {
             String[] tokens = cur.split(" ");
             ECSNode node = new ECSNode(tokens[0], tokens[1], Integer.parseInt(tokens[2]));
             nodePool.add(node);
+            logger.debug("Server at " + tokens[0] + ":" + tokens[1] + " added to nodePool");
         }
 
-        final CountDownLatch connSignal = new CountDownLatch(0);
+        final CountDownLatch latch = new CountDownLatch(0);
         zk = new ZooKeeper(ZK_IP + ":" + ZK_PORT, ZK_TIMEOUT, new Watcher() {
             public void process(WatchedEvent event) {
                 if (event.getState() == Watcher.Event.KeeperState.SyncConnected) {
-                    connSignal.countDown();
+                    latch.countDown();
                 }
             }
         });
         try {
-            connSignal.await();
+            latch.await();
         } catch (InterruptedException e) {
             logger.error("Interrupted Exception while creating ECS");
             e.printStackTrace();
         }
         updateMetadata();
+        logger.info("ECS initialized at zookeeper " + ZK_IP + ":" + ZK_PORT);
     }
 
     @Override
@@ -80,7 +81,6 @@ public class ECS implements IECSClient {
         for(IECSNode node : listOfNodesToStart){
             hashRing.addNode(node);
         }
-
         redistributeData(listOfNodesToStart);
 
         // Need to broadcast KVadmin message to all nodes
@@ -104,11 +104,11 @@ public class ECS implements IECSClient {
             }
         }
 
+        // broadcast stop messages to nodes to stop
         ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToStop);
         KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.STOP);
         broadcaster.broadcast(adminMsg);
 
-        // broadcast stop messages to nodes to stop
         for (IECSNode node : listOfNodesToStop) {
             hashRing.removeNode(node.getNodeHash());
         }
@@ -124,7 +124,9 @@ public class ECS implements IECSClient {
         List<IECSNode> listOfNodesToShutdown = new ArrayList<>();
         for (Map.Entry<String, IECSNode> nodeEntry : initNodes.entrySet()) {
             IECSNode node = nodeEntry.getValue();
-            listOfNodesToShutdown.add(node);
+            if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
+                listOfNodesToShutdown.add(node);
+            }
         }
 
         // broadcast shutdown message to active nodes
@@ -180,16 +182,16 @@ public class ECS implements IECSClient {
         Collection<IECSNode> listOfNodesToAdd = setupNodes(count, cacheStrategy, cacheSize);
 
         for (IECSNode node : listOfNodesToAdd) {
-            String command = "java -jar " +
+            String command = "java -jar" + " " +
                     SERVER_JAR_PATH + " " +
-                    node.getNodePort() + " " +
+                    String.valueOf(node.getNodePort()) + " " +
                     cacheSize + " " +
                     cacheStrategy + " " +
                     node.getNodeName() + " " +
                     ZK_IP + " " +
                     ZK_PORT;
-            String sshCommand = "ssh -o StrictHostKeyChecking=no -n " + node.getNodeHost() + " nohup" + command + " &";
-
+            String sshCommand = "ssh -o StrictHostKeyChecking=no -n " + node.getNodeHost() + " nohup " + command + " &";
+            logger.info("Running ssh command " + sshCommand);
             try {
                 Process proc = Runtime.getRuntime().exec(sshCommand);
                 Thread.sleep(100);
@@ -206,16 +208,17 @@ public class ECS implements IECSClient {
             boolean result = awaitNodes(count, ZK_TIMEOUT);
             return result ? listOfNodesToAdd: null;
         } catch(Exception e) {
-            logger.error(e);
+            e.printStackTrace();
             return null;
         }
     }
+
 
     @Override
     public Collection<IECSNode> setupNodes(int count, String cacheStrategy, int cacheSize) {
         logger.info("Setting up " + count + " nodes with cache Strategy" + cacheStrategy);
 
-        if (count <=0 || count > nodePool.size()) { return null; }
+        if (count <=0 || count > nodePool.size()) return null;
         List<IECSNode> listOfNodesToSetup = new ArrayList<>();
         for (int i = 0 ; i < count; i++ ) {
             IECSNode node = nodePool.poll();
@@ -242,7 +245,6 @@ public class ECS implements IECSClient {
                     }
                 } else { zk.create(nodePath, metadataBytes, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT); }
             }
-
         } catch (KeeperException | InterruptedException e) {
             logger.error("Exception occured during setUpNodes in zookeeper");
             return null;
@@ -261,10 +263,14 @@ public class ECS implements IECSClient {
 
         for (Map.Entry<String, IECSNode> nodeEntry : initNodes.entrySet()) {
             IECSNode node = nodeEntry.getValue();
-            if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
+            if (node.getStatus().equals(ECSNode.ServerStatus.INACTIVE)) {
                 listOfNodesToWait.add(node);
             }
         }
+
+        ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToWait);
+        KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.READY);
+        broadcaster.broadcast(adminMsg);
 
         for (IECSNode node : listOfNodesToWait) {
             node.setStatus(ECSNode.ServerStatus.STOP);
@@ -295,6 +301,7 @@ public class ECS implements IECSClient {
         KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.SHUT_DOWN);
         broadcaster.broadcast(adminMsg);
 
+        //TODO: might be wrong
         for (IECSNode node : listOfNodesToRemove) {
             if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
                 node.setStatus(ECSNode.ServerStatus.OFFLINE);

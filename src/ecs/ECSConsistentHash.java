@@ -3,16 +3,13 @@ package ecs;
 import com.google.gson.Gson;
 import org.apache.log4j.Logger;
 
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.SortedMap;
-import java.util.TreeMap;
+import java.util.*;
 
 public class ECSConsistentHash {
+    private Logger logger = Logger.getRootLogger();
+    private static final int REPLICATION_NUMBER = 2;
 
     private SortedMap<String, IECSNode> ring = new TreeMap<>();
-
-    private Logger logger = Logger.getRootLogger();
 
     public ECSConsistentHash(){
     }
@@ -87,7 +84,7 @@ public class ECSConsistentHash {
         Object result = gson.fromJson(json, SortedMap.class);
         SortedMap<String, ECSNode> ringRebuilt = (SortedMap<String, ECSNode>) result;
         for(Map.Entry<String, ECSNode> entry : ringRebuilt.entrySet()){
-            ECSNode node = (ECSNode) gson.fromJson(gson.toJson(entry.getValue()), ECSNode.class);
+            ECSNode node = gson.fromJson(gson.toJson(entry.getValue()), ECSNode.class);
             ring.put(entry.getKey(), node);
         }
     }
@@ -116,6 +113,41 @@ public class ECSConsistentHash {
         }
     }
 
+    public ECSNode getNodeByNodeName(String nodeName) {
+        if (ring.isEmpty()) return null;
+
+        // loop through all the nodes in ring
+        for (IECSNode node : ring.values()) {
+            String name = node.getNodeName();
+            // found
+            if (name.equals(nodeName)) {
+                return (ECSNode) node;
+            }
+        }
+        // cannot find the node by name
+        logger.warn("Cannot get node from hash ring with nodeName " + nodeName);
+        return null;
+    }
+
+    // find the next two successor of the coordinator node
+    public Set<IECSNode> getReplicaNodesByCoordinator(IECSNode coordinator) {
+        assert ring.size() > REPLICATION_NUMBER;
+
+        // use set to prevent duplicates
+        Set<IECSNode> replicaSet = new HashSet<>();
+        IECSNode curr = coordinator;
+
+        // use findNextNode to find the N successors after coordinator
+        // TODO: what if the successor is at the end of the ring?
+        for (int i = 0 ; i < REPLICATION_NUMBER; i++) {
+            IECSNode nextNode = findNextNode(coordinator.getNodeHash());
+            // assert that the nextNode's previous node is the curr node
+            assert nextNode.getPrevNode().equals(curr.getNodeHash());
+            replicaSet.add(nextNode);
+            curr = nextNode;
+        }
+        return replicaSet;
+    }
 
 
 }

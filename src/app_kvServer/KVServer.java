@@ -1,12 +1,19 @@
 package app_kvServer;
 
+import com.sun.security.ntlm.Server;
+import org.apache.log4j.Logger;
+import org.apache.log4j.Level;
+import org.apache.zookeeper.*;
+import com.google.gson.Gson;
+
 import client.KVStore;
 import ecs.*;
 import ecs.ECS;
 import logger.LogSetup;
-import org.apache.log4j.Logger;
-import org.apache.log4j.Level;
-import org.apache.zookeeper.*;
+
+import org.apache.zookeeper.data.Stat;
+import server.ReplicationManager;
+import server.ServerMetadata;
 import server.cache.*;
 import server.storage.*;
 import server.KVClientConnection;
@@ -25,24 +32,47 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 
+
 public class KVServer extends Thread implements IKVServer, Watcher {
 
     private static Logger logger = Logger.getRootLogger();
     private static final int maxKeyLength = 20;
     private static final int maxValueLength = 120 * 1024;
 
-    private int port, cacheSize, zkPort;
-    private CacheStrategy strategy;
-    private boolean running, stopped, lock_writes;
-    private ServerSocket serverSocket;
-    private IKVStorage storage;
-	private Cache cache;
-	private ECSConsistentHash metadata;
-	private String start, end;
-	private Map<String, String> toDelete;
-	private String zkHost, name, zkPath;
-	private ZooKeeper zk;
+    public enum Status {
+        START, /* Server running */
+        STOP,  /* Server stopped */
+        LOCK_WRITE /* Server locked for write */
+    }
 
+    private String name;
+    private int port;
+    private int cacheSize;
+    private CacheStrategy strategy;
+
+    private Status status;
+    private boolean running;
+    public boolean distributed = false;
+    private ServerSocket serverSocket;
+
+    /* Storage */
+    private IKVStorage storage;
+    private Cache cache;
+
+    /* ECS Consistent hash ring */
+	private ECSConsistentHash metadata;
+	private String start;
+    private String end;
+	private Map<String, String> toDelete;
+
+	/* Zookeeper */
+	private ZooKeeper zk;
+	private int zkPort;
+	private String zkHost;
+	private String zkPath;
+
+	/* Replication */
+    private ReplicationManager replicationManager;
 
     /**
      * Start KV Server at given port
@@ -60,6 +90,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         this.port = port;
         this.cacheSize = cacheSize;
         this.strategy = CacheStrategy.valueOf(strategy);
+        this.status = Status.START;
 		this.metadata = new ECSConsistentHash();
         if (storage == null ) storage = KVStorage.getInstance();
 
@@ -76,9 +107,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 			default:
 		}
 
-		// non distributed case
-		stopped = false;
-		lock_writes = false;
+		// Non-distributed case
         start = "00000000000000000000000000000000";
         end = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
         toDelete = new HashMap<>();
@@ -91,47 +120,38 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     	this(port, cacheSize, strategy);
 
 		// on init, block all client requests
-		stopped = true;
+        this.status = Status.STOP;
 
 		// establish connection to Zookeeper host
-		this.zkHost = zkHost;
+        this.distributed = true;
+        this.zkHost = zkHost;
 		this.zkPort = zkPort;
 		this.name = name;
 		this.zkPath = ECS.ZK_SERVER_ROOT + "/" + name;
 		String zkServer = zkHost + ":" + zkPort;
+
 		connectToZookeeper(zkServer);
+        retrieveCacheInfo();
+
+        // set watch for all other messages to this server
+        try {
+            List<String> children = zk.getChildren(zkPath, this, null);
+            if (!children.isEmpty()) {
+                String adminMsgPath = zkPath + "/" + children.get(0);
+                KVAdminMessage adminMsg = new Gson().fromJson(
+                        new String(zk.getData(adminMsgPath, false, null)), KVAdminMessage.class);
+                if (adminMsg.getStatus().equals(KVAdminMessage.Status.READY)) {
+                    Stat exists = zk.exists(adminMsgPath, false);
+                    zk.delete(adminMsgPath, exists.getVersion());
+                }
+            }
+        } catch (KeeperException | InterruptedException e){
+            logger.error("Server " + name + " unable to retrieve zk children ");
+            e.printStackTrace();
+        }
 
 		// set watch for metadata
-		try {
-			byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, new Watcher() {
-				// update metadata
-				public void process(WatchedEvent we) {
-					try {
-						byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, this, null);
-						String json = new String(hashRing);
-						updateMetadata(json);
-					} catch (KeeperException | InterruptedException e) {
-						logger.error("Unable to update the metadata node");
-						e.printStackTrace();
-					}
-				}
-			}, null);
-
-			String json = new String(hashRing);
-			updateMetadata(json);
-
-		} catch (InterruptedException | KeeperException e) {
-			logger.debug("Unable to get metadata info");
-			e.printStackTrace();
-		}
-
-		// set watch for all other messages to this server
-		try {
-			zk.getChildren(zkPath, this, null);
-		} catch (InterruptedException | KeeperException e) {
-			logger.error("Cannot set watch on path " + zkPath);
-		}
-
+        setUpHashRingMetadata();
 	}
 
     @Override
@@ -300,7 +320,10 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     public void kill() {
         this.running = false;
         try {
-            serverSocket.close();
+            if (serverSocket != null) serverSocket.close();
+            if (this.replicationManager != null) {
+                this.replicationManager.clearReplicatorList();
+            }
         } catch (IOException e) {
             logger.error("Failed to close socket!");
         }
@@ -317,7 +340,9 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         logger.info("Starting KVServer...");
         try {
             serverSocket = new ServerSocket(port);
-            logger.info("Server listening on the port " + serverSocket.getLocalPort());
+            this.port = getPort();
+            logger.info("Server listening on the port " + port);
+            this.replicationManager = new ReplicationManager(name, getHostname(), this.port );
             return true;
         } catch (IOException e) {
             logger.error("Cannot open server socket!");
@@ -346,12 +371,12 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
 	@Override
 	public boolean serverStopped() {
-		return stopped;
+        return status.equals(Status.STOP);
 	}
 
 	@Override
 	public boolean writeLocked() {
-		return lock_writes;
+        return status.equals(Status.LOCK_WRITE);
 	}
 
 	public void updateMetadata(String json) {
@@ -376,25 +401,24 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
 	public void lockWrite() {
 		logger.info("Write operations have been locked");
-		lock_writes = true;
+		this.status = Status.LOCK_WRITE;
 	}
 
 	public void unlockWrite() {
 		// Delete keys that were transferred
 		deleteTransferredKeys();
 		logger.info("Write operations have been unlocked");
-		lock_writes = false;
-
-	}
+	    this.status = Status.START;
+    }
 
 	public void rejectClientRequests() {
 		logger.info("This server is now blocking client requests");
-		stopped = true;
+		this.status = Status.STOP;
 	}
 
 	public void acceptClientRequests() {
 		logger.info("This server is now processing client requests");
-		stopped = false;
+		this.status = Status.START;
 	}
 
 	private void moveData(String start, String end, String address, int port) {
@@ -456,8 +480,54 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		return this.running;
 	}
 
+	private void setUpHashRingMetadata() {
+        try {
+            byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, new Watcher() {
+                // update metadata
+                public void process(WatchedEvent we) {
+                    try {
+                        byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, this, null);
+                        String json = new String(hashRing);
+                        updateMetadata(json);
+                        if (replicationManager != null ) {
+                            replicationManager.updateReplicatorList(metadata);
+                        }
+                    } catch (KeeperException | InterruptedException e) {
+                        logger.error("Unable to update the metadata node");
+                        e.printStackTrace();
+                    } catch (IOException ioe) {
+                        logger.error("Unable to update metadata for replication manager");
+                        ioe.printStackTrace();
+                    }
+                }
+            },null);
+            String json = new String(hashRing);
+            updateMetadata(json);
+        } catch (InterruptedException | KeeperException e) {
+            logger.debug("Unable to get metadata info");
+            e.printStackTrace();
+        }
+    }
+
+	private void retrieveCacheInfo() {
+        try {
+            if (zk.exists(zkPath, false) != null) {
+                byte[] cacheBytes= zk.getData(zkPath, false, null);
+                String cache = new String(cacheBytes);
+                ServerMetadata jsonMetadata = new Gson().fromJson(cache, ServerMetadata.class);
+                this.cacheSize = jsonMetadata.getCacheSize();
+                this.strategy = CacheStrategy.valueOf(jsonMetadata.getCacheStrategy());
+                logger.debug(name + " cache info retrieved from ZK path " + zkPath);
+            } else logger.error("Server " + name + " doesn't exist at ZK path" + zkPath);
+        } catch (InterruptedException | KeeperException e) {
+            logger.error("Server " + name + " cannot retrieve cache from path " + zkPath);
+            this.cacheSize = 50;
+            this.strategy = CacheStrategy.FIFO;
+        }
+    }
+
 	private void connectToZookeeper(String zkServer) throws IOException {
-		final CountDownLatch latch = new CountDownLatch(1);
+        CountDownLatch latch = new CountDownLatch(0);
 		zk = new ZooKeeper(zkServer, ECS.ZK_TIMEOUT, new Watcher() {
 			public void process(WatchedEvent event) {
 				if (event.getState().equals(Event.KeeperState.SyncConnected)) {
@@ -482,65 +552,82 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
 		try {
 			children = zk.getChildren(zkPath, false, null);
-			String path = zkPath + "/" + children.get(0);
-
 			if (children.isEmpty()) {
 				// no message to process, just re-register watch
 				zk.getChildren(zkPath, this, null);
-			} else if (children.size() > 1) {
+				return;
+			}
+
+			String path = zkPath + "/" + children.get(0);
+			if (children.size() > 1) {
 				String errorMsg = (name + " expects only one message, received "
 									+ children.size());
 				logger.error(errorMsg);
 				zk.setData(path, errorMsg.getBytes(), zk.exists(path, false).getVersion());
-			} else {
-				byte[] data = zk.getData(path, false, null);
-				KVAdminMessage msg = new KVAdminMessage();
-				String json = new String(data);
-				msg.deserialize(json);
+			}
 
-				switch (msg.getStatus()) {
-					case START:
-						acceptClientRequests();
-						zk.delete(path, zk.exists(path, false).getVersion());
-						break;
-					case STOP:
-						rejectClientRequests();
-						zk.delete(path, zk.exists(path, false).getVersion());
-						break;
-					case SHUT_DOWN:
-						rejectClientRequests();
-						zk.delete(path, zk.exists(path, false).getVersion());
-						close();
-						break;
-					case LOCK_WRITE:
-						lockWrite();
-						zk.delete(path, zk.exists(path, false).getVersion());
-						break;
-					case UNLOCK_WRITE:
-						unlockWrite();
-						zk.delete(path, zk.exists(path, false).getVersion());
-						break;
-					case MOVE_DATA:
-						ArrayList<String> args = msg.getArgs();
+			byte[] data = zk.getData(path, false, null);
+			KVAdminMessage adminMessage = new KVAdminMessage();
+			String json = new String(data);
+            adminMessage.deserialize(json);
+            Stat exists;
 
-						if (args.size() != 4) {
-							String errorMsg = ("Incorrect number of args "
-											   + "sent to MOVE_DATA command");
-							zk.setData(path, errorMsg.getBytes(), zk.exists(path, false).getVersion());
-						} else {
-							moveData(args.get(0), args.get(1), args.get(2),
-									Integer.parseInt(args.get(3)));
-						}
-						break;
+			switch (adminMessage.getStatus()) {
+                case READY:
+                    exists = zk.exists(path, false);
+                    zk.delete(path, exists.getVersion());
+                    break;
 
-				}
+                case START:
+                    acceptClientRequests();
+                    exists = zk.exists(path, false);
+                    zk.delete(path, exists.getVersion());
+                    break;
 
+                case STOP:
+                    rejectClientRequests();
+                    exists = zk.exists(path, false);
+                    zk.delete(path, exists.getVersion());
+                    break;
+
+                case SHUT_DOWN:
+                    rejectClientRequests();
+                    exists = zk.exists(path, false);
+                    zk.delete(path, exists.getVersion());
+                    close();
+                    break;
+
+                case LOCK_WRITE:
+                    lockWrite();
+                    exists = zk.exists(path, false);
+                    zk.delete(path, exists.getVersion());
+                    break;
+
+                case UNLOCK_WRITE:
+                    unlockWrite();
+                    exists = zk.exists(path, false);
+                    zk.delete(path, exists.getVersion());
+                    break;
+
+                case MOVE_DATA:
+                    ArrayList<String> args = adminMessage.getArgs();
+
+                    if (args.size() != 4) {
+                        String errorMsg = ("Incorrect number of args "
+                                + "sent to MOVE_DATA command");
+                        exists = zk.exists(path, false);
+                        zk.setData(path, errorMsg.getBytes(), exists.getVersion());
+                    } else {
+                        moveData(args.get(0), args.get(1), args.get(2),
+                                Integer.parseInt(args.get(3)));
+                    }
+                    break;
+            }
 				// re-register watch
 				if (isRunning()) {
 					zk.getChildren(zkPath, this, null);
 				}
-			}
-		} catch (KeeperException | InterruptedException e) {
+			} catch (KeeperException | InterruptedException e) {
             logger.error("Unable to process the watcher event");
         }
 	}
@@ -573,7 +660,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             ret = false;
             System.out.println("Error! Invalid argument <cache_strategy>! Has to be either \"FIFO\" or \"LIFO\" or \"LFU\"!");
         }
-
         return ret;
     }
 

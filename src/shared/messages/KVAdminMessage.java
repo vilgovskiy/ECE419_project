@@ -12,6 +12,7 @@ public class KVAdminMessage implements SerializeDeserializable {
 		LOCK_WRITE, /* lock the KVServer for write applications */
 		UNLOCK_WRITE, /* unlock the KVServer for write applications */
 		MOVE_DATA, /* transfer data between servers */
+		READY
 	};
 
 	private Status status;
