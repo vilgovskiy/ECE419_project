@@ -150,6 +150,9 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             e.printStackTrace();
         }
 
+        // set up failure detection
+        setUpFailureDetection();
+
 		// set watch for metadata
         setUpHashRingMetadata();
 	}
@@ -479,6 +482,19 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	private boolean isRunning() {
 		return this.running;
 	}
+
+	private void setUpFailureDetection() {
+        try {
+            if (zk.exists(ECS.ZK_ALIVE_PATH, false) != null) {
+                String path = ECS.ZK_ALIVE_PATH + "/" + this.name;
+                zk.create(path, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+            } else {
+                logger.error("Unable to setup failure detection node - zookeeper alive path does not exist");
+            }
+        } catch (KeeperException | InterruptedException e) {
+            logger.error("Unable to set up failure detection node");
+        }
+    }
 
 	private void setUpHashRingMetadata() {
         try {

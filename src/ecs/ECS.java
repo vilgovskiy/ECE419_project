@@ -26,9 +26,11 @@ public class ECS implements IECSClient {
     public static final String ZK_PORT = "49999";
     public static final Integer ZK_TIMEOUT = 5000;
 
+    public static final String ZK_ALIVE_PATH = "/alive";
     public static final String ZK_METADATA_PATH = "/metadata";
     public static final String ZK_SERVER_ROOT = "/kv_servers";
     public static final String SERVER_JAR_PATH = "ms2-server.jar";
+    public static final Integer MAX_ATTEMPTS = 10;
 
     // Set of all servers available in the system through config file
     private Queue<IECSNode> nodePool = new ConcurrentLinkedQueue<>();
@@ -230,6 +232,10 @@ public class ECS implements IECSClient {
                 zk.create(ZK_SERVER_ROOT, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             }
 
+            if (zk.exists(ZK_ALIVE_PATH, false) == null) {
+                zk.create(ZK_ALIVE_PATH, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
+            }
+
             ServerMetadata metadata = new ServerMetadata(cacheSize, cacheStrategy);
             byte[] metadataBytes = new Gson().toJson(metadata).getBytes();
 
@@ -274,6 +280,12 @@ public class ECS implements IECSClient {
 
         for (IECSNode node : listOfNodesToWait) {
             node.setStatus(ECSNode.ServerStatus.STOP);
+            try {
+                setUpFailureDetection(node);
+            } catch (Exception e) {
+                logger.error("Could not setup failure detector for node: " + node.getNodeName());
+            }
+
         }
         return true;
     }
@@ -400,5 +412,29 @@ public class ECS implements IECSClient {
         writeUnlock.broadcast(adminMsg3);
 
         return true;
+    }
+
+    private void setUpFailureDetection(IECSNode node) throws Exception {
+        String path = ECS.ZK_ALIVE_PATH + "/" + node.getNodeName();
+        Integer attempts = 1;
+        try {
+            Stat exists = zk.exists(path, false);
+            while (exists == null && attempts < MAX_ATTEMPTS) {
+                // keep checking if the alive node has been created for this node
+                exists = zk.exists(path, false);
+                attempts += 1;
+                Thread.sleep(1000);
+            }
+
+            if (attempts == MAX_ATTEMPTS) {
+                throw new Exception();
+            } else {
+                // launch the failure detector for this node
+                Watcher detector = new ECSFailureDetector(this, node);
+                zk.getData(path, detector, exists);
+            }
+        } catch (KeeperException | InterruptedException e) {
+            logger.error("Could not launch failure detector for node: " + node.getNodeName());
+        }
     }
 }
