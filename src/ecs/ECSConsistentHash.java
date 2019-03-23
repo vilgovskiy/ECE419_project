@@ -138,7 +138,7 @@ public class ECSConsistentHash {
         IECSNode curr = coordinator;
 
         // use findNextNode to find the N successors after coordinator
-        // TODO: what if the successor is at the end of the ring?
+        // TODO: what if the successor is at the end of the ring? Actually findNextNode handles this case
         for (int i = 0 ; i < REPLICATION_NUMBER; i++) {
             IECSNode nextNode = findNextNode(coordinator.getNodeHash());
             // assert that the nextNode's previous node is the curr node

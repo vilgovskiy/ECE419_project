@@ -358,6 +358,8 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		return metadata;
 	}
 
+    public ReplicationManager getReplicationManager(){return replicationManager;}
+
 	@Override
 	public synchronized boolean inServerKeyRange(String key) {
     	if (start.compareTo(end) < 0) {

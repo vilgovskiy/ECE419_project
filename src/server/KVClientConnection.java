@@ -15,6 +15,7 @@ import shared.messages.JsonMessage;
 import shared.messages.KVMessage;
 
 import com.google.gson.JsonSyntaxException;
+
 import java.lang.IllegalStateException;
 
 
@@ -26,6 +27,8 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
 
     private Socket clientSocket;
 
+    private ReplicationManager replicationManager;
+
     /**
      * Constructs a new CientConnection object for a given TCP socket.
      *
@@ -35,6 +38,7 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
         this.kvServer = kvServer;
         this.clientSocket = clientSocket;
         this.isOpen = true;
+        this.replicationManager = kvServer.getReplicationManager();
     }
 
     @Override
@@ -63,9 +67,9 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                     logger.error("Error! Connection lost!");
                     isOpen = false;
                 } catch (Exception e) {
-					logger.error("Error receiving connection!", e);
-					isOpen = false;
-				}
+                    logger.error("Error receiving connection!", e);
+                    isOpen = false;
+                }
             }
         } catch (IOException ioe) {
             logger.error("Error! Connection could not be established!", ioe);
@@ -85,39 +89,54 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
 
     private JsonMessage processMsg(JsonMessage msg) {
         JsonMessage response = new JsonMessage();
-		String hashedKey = ECSNode.calculateHash(msg.getKey());
+        String hashedKey = ECSNode.calculateHash(msg.getKey());
         logger.info("Received message from " + clientSocket.getInetAddress());
 
-		if (kvServer.serverStopped()) {
-			logger.info("Server stopped, not processing any client requests!");
-			response.setStatus(KVMessage.StatusType.SERVER_STOPPED);
-		} else if (!kvServer.inServerKeyRange(hashedKey)) {
-			String server = kvServer.getHostname() + ":" + kvServer.getPort();
-			logger.info(server + " not responsible for key " + msg.getKey());
-			response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
+        if (kvServer.serverStopped()) {
+            logger.info("Server stopped, not processing any client requests!");
+            response.setStatus(KVMessage.StatusType.SERVER_STOPPED);
+        } else if (!kvServer.inServerKeyRange(hashedKey)) {
+            String server = kvServer.getHostname() + ":" + kvServer.getPort();
+            logger.info(server + " not responsible for key " + msg.getKey());
+            response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
 
-			// Get metadata and send back to client
-			ECSConsistentHash metadata = kvServer.getMetadata();
-			response.setMetadata(metadata.serializeHash());
-		} else {
-			switch (msg.getStatus()) {
-				case PUT:
-					if (kvServer.writeLocked()) {
-						logger.info("Write requests are currently blocked");
-						response.setStatus(KVMessage.StatusType.SERVER_WRITE_LOCK);
-					} else {
-						logger.info("PUT request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
-						response = kvServer.putKV(msg.getKey(), msg.getValue());
-					}
+            // Get metadata and send back to client
+            ECSConsistentHash metadata = kvServer.getMetadata();
+            response.setMetadata(metadata.serializeHash());
+        } else {
+            switch (msg.getStatus()) {
+                case REPLICA_PUT:
+                case PUT: {
+                    if (kvServer.writeLocked()) {
+                        logger.info("Write requests are currently blocked");
+                        response.setStatus(KVMessage.StatusType.SERVER_WRITE_LOCK);
+                        break;
+                    }
+                    logger.info("PUT request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
+                    response = kvServer.putKV(msg.getKey(), msg.getValue());
 
-					break;
-				case GET:
-					logger.info("GET request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
-					response = kvServer.getKV(msg.getKey());
-					break;
-				default:
-			}
-		}
+
+
+                        try {
+                            if (msg.getStatus().equals(KVMessage.StatusType.PUT)) {
+                                replicationManager.replicate(msg);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+
+
+
+
+                    break;
+                }
+                case GET:
+                    logger.info("GET request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
+                    response = kvServer.getKV(msg.getKey());
+                    break;
+                default:
+            }
+        }
 
         return response;
     }
