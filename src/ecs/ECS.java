@@ -24,12 +24,12 @@ public class ECS implements IECSClient {
 
     public static final String ZK_IP = "127.0.0.1";
     public static final String ZK_PORT = "49999";
-    public static final Integer ZK_TIMEOUT = 5000;
-    //public static final Integer ZK_TIMEOUT = 15000;
+    //public static final Integer ZK_TIMEOUT = 5000;
+    public static final Integer ZK_TIMEOUT = 20000;
 
     public static final String ZK_METADATA_PATH = "/metadata";
     public static final String ZK_SERVER_ROOT = "/kv_servers";
-    public static final String SERVER_JAR_PATH = "ms2-server.jar";
+    public static final String SERVER_JAR_PATH = "m2-server.jar";
 
     // Set of all servers available in the system in config file
     private Queue<IECSNode> nodePool = new ConcurrentLinkedQueue<>();

@@ -147,11 +147,39 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             logger.error(" unable to retrieve zk children ");
             e.printStackTrace();
         }
+
+        try {
+            byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, new Watcher() {
+                // update metadata
+                public void process(WatchedEvent we) {
+                    try {
+                        byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, this, null);
+                        String jsonRing = new String(hashRing);
+                        hashRingMetadata = new ECSConsistentHash(jsonRing);
+                        if (replicationManager != null ) {
+                            replicationManager.updateReplicatorList(hashRingMetadata);
+                        }
+                    } catch (KeeperException | InterruptedException e) {
+                        logger.error("Server unable to update the metadata node");
+                        e.printStackTrace();
+                    } catch (IOException ioe) {
+                        logger.error("Server unable to update metadata for replication manager");
+                        ioe.printStackTrace();
+                    }
+                }
+            },null);
+
+            String jsonRing = new String(hashRing);
+            hashRingMetadata = new ECSConsistentHash(jsonRing);
+        } catch (InterruptedException | KeeperException e) {
+            logger.debug("Server " + name + " unable to get metadata info from zookeeper");
+            e.printStackTrace();
+        }
 	}
 
     @Override
     public int getPort() {
-        return serverSocket.getLocalPort();
+        return this.port;
     }
 
     public String getServerName() {
@@ -160,10 +188,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
     @Override
     public String getHostname() {
-        if (serverSocket != null) {
-            return serverSocket.getInetAddress().getHostName();
-        }
-        return null;
+        return "127.0.0.1";
     }
 
     @Override
@@ -340,13 +365,15 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     }
 
     private boolean initializeKVServer() {
+
         logger.info("Server " + name + " Starting KVServer...");
         try {
             serverSocket = new ServerSocket(port);
-            this.port = getPort();
-            logger.info("Server " + name + " listening on "+ getHostname() + ":" + getPort());
+            this.port = serverSocket.getLocalPort();
+            logger.info("Server " + name + " listening on "+ getHostname() + ":" + serverSocket.getLocalPort());
+
             // set watch for metadata
-            setUpHashRingMetadata();
+            //setUpHashRingMetadata();
             this.replicationManager = new ReplicationManager(name, getHostname(), this.port);
             return true;
         } catch (IOException e) {
@@ -388,9 +415,9 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         return status.equals(Status.LOCK_WRITE);
 	}
 
-	public void updateHashRingMetadata(String json) {
+	public void updateHashRingMetadata(String jsonRing) {
 		// update metadata
-		this.hashRingMetadata.updateConsistentHash(json);
+		this.hashRingMetadata.updateConsistentHash(jsonRing);
 
 		// update the range this server is responsible for
 		String key = getHostname() + ":" + getPort();
@@ -496,8 +523,8 @@ public class KVServer extends Thread implements IKVServer, Watcher {
                 public void process(WatchedEvent we) {
                     try {
                         byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, this, null);
-                        String json = new String(hashRing);
-                        updateHashRingMetadata(json);
+                        String jsonRing = new String(hashRing);
+                        updateHashRingMetadata(jsonRing);
                         if (replicationManager != null ) {
                             replicationManager.updateReplicatorList(hashRingMetadata);
                         }
@@ -510,8 +537,9 @@ public class KVServer extends Thread implements IKVServer, Watcher {
                     }
                 }
             },null);
-            String json = new String(hashRing);
-            updateHashRingMetadata(json);
+
+            String jsonRing = new String(hashRing);
+            updateHashRingMetadata(jsonRing);
         } catch (InterruptedException | KeeperException e) {
             logger.debug("Server " + name + " unable to get metadata info from zookeeper");
             e.printStackTrace();
