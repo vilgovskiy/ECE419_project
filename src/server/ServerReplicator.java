@@ -14,14 +14,14 @@ import java.io.BufferedOutputStream;
 public class ServerReplicator extends AbstractCommunication {
     private Logger logger = Logger.getRootLogger();
 
-    private String nodeHost;
+    private String nodeHost = "127.0.0.1";
     private int nodePort;
     private Socket socket;
-    private BufferedInputStream input;
-    private BufferedOutputStream output;
+//    private BufferedInputStream input;
+//    private BufferedOutputStream output;
 
     public ServerReplicator(IECSNode node) {
-        nodeHost = node.getNodeName();
+        nodeHost = node.getNodeHost();
         nodePort = node.getNodePort();
     }
 

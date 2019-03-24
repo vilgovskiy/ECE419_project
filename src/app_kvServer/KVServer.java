@@ -84,13 +84,47 @@ public class KVServer extends Thread implements IKVServer, Watcher {
      *                  and "LFU".
      */
 
+
     public KVServer(int port, int cacheSize, String strategy) {
         this.port = port;
         this.cacheSize = cacheSize;
         this.strategy = CacheStrategy.valueOf(strategy);
         this.status = Status.START;
+        this.hashRingMetadata = new ECSConsistentHash();
+        if (storage == null ) {
+            storage = new KVStorage("storage");
+        }
+
+        switch (this.strategy) {
+            case FIFO:
+                cache = new FIFOCache(cacheSize);
+                break;
+            case LRU:
+                cache = new LRUCache(cacheSize);
+                break;
+            case LFU:
+                cache = new LFUCache(cacheSize);
+                break;
+            default:
+        }
+
+        // Non-distributed case
+        start = "00000000000000000000000000000000";
+        end = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
+        toDelete = new HashMap<>();
+
+        logger.info("creating an instance of the KV server...");
+    }
+
+    public KVServer(int port, int cacheSize, String strategy, String storageFileName) {
+        this.port = port;
+        this.cacheSize = cacheSize;
+        this.strategy = CacheStrategy.valueOf(strategy);
+        this.status = Status.START;
 		this.hashRingMetadata = new ECSConsistentHash();
-        if (storage == null ) storage = KVStorage.getInstance();
+        if (storage == null ) {
+            storage = new KVStorage(storageFileName);
+        }
 
         switch (this.strategy) {
 			case FIFO:
@@ -114,7 +148,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
     public KVServer(int port, int cacheSize, String strategy,
 					String name, String zkHost, int zkPort) throws IOException {
-    	this(port, cacheSize, strategy);
+    	this(port, cacheSize, strategy, name);
 
 		// on init, block all client requests
         this.status = Status.STOP;
@@ -702,7 +736,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
                 int cacheSize = Integer.parseInt(args[1]);
                 String strategy = args[2];
 
-                new KVServer(port, cacheSize, strategy).start();
+                new KVServer(port, cacheSize, strategy, "storage").start();
             } else {
 				int port = Integer.parseInt(args[0]);
 				int cacheSize = Integer.parseInt(args[1]);

@@ -36,6 +36,8 @@ public class ECS implements IECSClient {
     public static final String SERVER_JAR_PATH = new File(System.getProperty("user.dir"),
             "m2-server.jar").toString();
 
+
+
     // Set of all servers available in the system in config file
     private Queue<IECSNode> nodePool = new ConcurrentLinkedQueue<>();
 
@@ -226,7 +228,8 @@ public class ECS implements IECSClient {
                     node.getNodeName() + " " +
                     ZK_IP + " " +
                     ZK_PORT;
-            String sshCommand = "ssh -o StrictHostKeyChecking=no -n " + node.getNodeHost() + " nohup " + command + " &";
+            String sshCommand = "ssh -o StrictHostKeyChecking=no -n " + node.getNodeHost() + " nohup " + command +
+                    " > " + getServerLogPath(node.getNodeName());
             logger.info("Adding node " + node.getNodeName()  + ", ssh command " + sshCommand);
             try {
                 Process proc = Runtime.getRuntime().exec(sshCommand);
@@ -549,5 +552,10 @@ public class ECS implements IECSClient {
         } catch (KeeperException | InterruptedException e) {
             logger.error("Could not launch failure detector for node: " + node.getNodeName());
         }
+    }
+  
+    private String getServerLogPath(String nodeName) {
+        String logPath = "logs/server_" + nodeName + ".log";
+        return new File(System.getProperty("user.dir"), logPath).toString();
     }
 }
