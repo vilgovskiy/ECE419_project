@@ -110,7 +110,8 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
             logger.info("Server " + kvServer.getServerName() + " not responsible for key "
                     + msg.getKey() + " with keyHash" + ECSNode.calculateHash(msg.getKey()));
             response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
-            response.setValue(kvServer.getHashRingMetadata().serializeHashRing());
+            response.setMetadata(kvServer.getHashRingMetadata().serializeHashRing());
+            logger.debug(kvServer.getHashRingMetadata().serializeHashRingPretty());
             return response;
         }
 

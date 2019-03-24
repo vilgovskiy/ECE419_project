@@ -35,7 +35,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	public KVStore(String address, int port) {
 		this.address = address;
 		this.port = port;
-		ECSNode newNode = new ECSNode("server-1", this.address, this.port);
+		ECSNode newNode = new ECSNode("server1", this.address, this.port);
 		ecsHashRing = new ECSConsistentHash();
 		ecsHashRing.addNode(newNode);
 	}
