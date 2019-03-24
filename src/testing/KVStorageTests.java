@@ -27,8 +27,8 @@ public class KVStorageTests extends TestCase {
 
     @Test
     public void testKVStorage() {
-        KVStorage storage = KVStorage.getInstance("");
-        File storageFile = new File("_data");
+        KVStorage storage = new KVStorage("test1");
+        File storageFile = new File("test1_data");
         assert(storageFile.exists());
 
         KVData data1 = new KVData("key", "value");
@@ -44,6 +44,4 @@ public class KVStorageTests extends TestCase {
         assert(foundEntry.getValue().equals(""));
         storageFile.delete();
     }
-
-
 }

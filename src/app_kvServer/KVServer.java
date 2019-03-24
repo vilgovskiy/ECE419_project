@@ -92,7 +92,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         this.status = Status.START;
         this.hashRingMetadata = new ECSConsistentHash();
         if (storage == null ) {
-            storage = KVStorage.getInstance("storage_");
+            storage = new KVStorage("storage");
         }
 
         switch (this.strategy) {
@@ -123,7 +123,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         this.status = Status.START;
 		this.hashRingMetadata = new ECSConsistentHash();
         if (storage == null ) {
-            storage = KVStorage.getInstance(storageFileName);
+            storage = new KVStorage(storageFileName);
         }
 
         switch (this.strategy) {

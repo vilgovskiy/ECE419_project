@@ -16,24 +16,21 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class KVStorage implements IKVStorage {
     private static Logger logger = Logger.getRootLogger();
-    private static KVStorage storageInstance = null;
+    //private static KVStorage storageInstance = null;
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
     private String dataFilePath;
+    private String dataFileName;
     private long currLength;
 
-    private KVStorage(String name) {
-        this.dataFilePath = name + "_data";
+
+    public KVStorage(String name) {
+        dataFileName = name;
+        dataFilePath = new File(System.getProperty("user.dir"), name).toString();
         openStorageFile();
         this.currLength = 0;
     }
 
-    public static KVStorage getInstance(String name) {
-        if (storageInstance == null) {
-            storageInstance = new KVStorage(name);
-        }
-        return storageInstance;
-    }
 
     private void openStorageFile() {
         logger.info("creating data file at " + dataFilePath + "...");
@@ -47,6 +44,17 @@ public class KVStorage implements IKVStorage {
                 logger.error("cannot create data file" + dataFilePath, e);
             }
         }
+    }
+
+    public void clearStorage() {
+        logger.info("deleting storage data file " + dataFilePath + "...");
+        File storageFile = new File(dataFilePath);
+        if (storageFile.exists()) {
+            storageFile.delete();
+            logger.info("storage data file " + dataFilePath + " deleted");
+        }
+        assert(!storageFile.exists());
+        openStorageFile();
     }
 
     public long getCurrLength() {
@@ -207,14 +215,4 @@ public class KVStorage implements IKVStorage {
         }
     }
 
-    public void clearStorage() {
-        logger.info("deleting storage data file " + dataFilePath + "...");
-        File storageFile = new File(dataFilePath);
-        if (storageFile.exists()) {
-            storageFile.delete();
-            logger.info("storage data file " + dataFilePath + " deleted");
-        }
-        assert(!storageFile.exists());
-        openStorageFile();
-    }
 }
