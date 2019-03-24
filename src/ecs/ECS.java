@@ -24,7 +24,8 @@ public class ECS implements IECSClient {
 
     public static final String ZK_IP = "127.0.0.1";
     public static final String ZK_PORT = "49999";
-    public static final Integer ZK_TIMEOUT = 5000;
+    //public static final Integer ZK_TIMEOUT = 5000;
+    public static final Integer ZK_TIMEOUT = 15000;
 
     public static final String ZK_METADATA_PATH = "/metadata";
     public static final String ZK_SERVER_ROOT = "/kv_servers";
@@ -36,7 +37,7 @@ public class ECS implements IECSClient {
     //Holds all currently initialized nodes
     private Map<String, IECSNode> initNodes = new HashMap<>();
 
-    //Contains all all hash mappings of all currently active servers
+    //Contains all all hash mappings of all currently ACTIVE servers
     private ECSConsistentHash hashRing = new ECSConsistentHash();
     private ZooKeeper zk;
 
@@ -78,40 +79,48 @@ public class ECS implements IECSClient {
                 listOfNodesToStart.add(node);
             }
         }
+        // add all the initialized nodes and currently in STOPPED state to hash ring
         for(IECSNode node : listOfNodesToStart){
             hashRing.addNode(node);
         }
         redistributeData(listOfNodesToStart);
 
-        // Need to broadcast KVadmin message to all nodes
+        // Need to broadcast KVadmin message of START to all nodes that are starting
         ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToStart);
         KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.START);
         broadcaster.broadcast(adminMsg);
 
+        // Set all status of starting nodes to ACTIVE
         for (IECSNode node : listOfNodesToStart) {
             node.setStatus(ECSNode.ServerStatus.ACTIVE);
         }
+
         updateMetadata();
         return true;
     }
 
     @Override
     public boolean stop() throws Exception {
+
         List<IECSNode> listOfNodesToStop = new ArrayList<>();
+        // add all nodes that are currently ACTIVE to nodes that needs to be stopped
         for (IECSNode node : nodePool) {
             if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
                 listOfNodesToStop.add(node);
             }
         }
 
-        // broadcast stop messages to nodes to stop
+        // broadcast stop messages to all the ACTIVE nodes to stop
         ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToStop);
         KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.STOP);
         broadcaster.broadcast(adminMsg);
 
+        // Remove all nodes that are stopping from hash ring
         for (IECSNode node : listOfNodesToStop) {
             hashRing.removeNode(node.getNodeHash());
         }
+
+        // Set all status of all nodes that were stopped to STOP
         for (IECSNode node: listOfNodesToStop) {
             node.setStatus(ECSNode.ServerStatus.STOP);
         }
@@ -146,26 +155,28 @@ public class ECS implements IECSClient {
     }
 
     /**
-     * Push the metadata(hash ring content) to ZooKeeper z-node
+     * Push the metadata(hash ring info) to ZooKeeper z-node
      */
     private boolean updateMetadata() {
         try {
             Stat exists = zk.exists(ZK_METADATA_PATH, false);
             if (exists == null) {
-                zk.create(ZK_METADATA_PATH, hashRing.serializeHash().getBytes(),
+                logger.debug("Updating hash ring info " + hashRing.serializeHashRingPretty());
+                zk.create(ZK_METADATA_PATH, hashRing.serializeHashRing().getBytes(),
                         ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
             } else {
-                zk.setData(ZK_METADATA_PATH, hashRing.serializeHash().getBytes(),
+                logger.debug("Updating hash ring info " + hashRing.serializeHashRingPretty());
+                zk.setData(ZK_METADATA_PATH, hashRing.serializeHashRing().getBytes(),
                         exists.getVersion());
             }
+            return true;
         } catch (InterruptedException e) {
-            logger.error("Interrupted");
+            logger.error("Interrupted Exception happened when updating metadata in ECS");
             return false;
         } catch (KeeperException e) {
-            logger.error(e.getMessage());
+            logger.error("KeeperException happened when updating metadata in ECS");
             return false;
         }
-        return true;
     }
 
     @Override
@@ -190,15 +201,17 @@ public class ECS implements IECSClient {
                     ZK_IP + " " +
                     ZK_PORT;
             String sshCommand = "ssh -o StrictHostKeyChecking=no -n " + node.getNodeHost() + " nohup " + command + " &";
-            logger.info("Running ssh command " + sshCommand);
+            logger.info("Adding node " + node.getNodeName()  + ", ssh command " + sshCommand);
             try {
                 Process proc = Runtime.getRuntime().exec(sshCommand);
                 Thread.sleep(100);
             } catch (IOException e) {
-                logger.error("IOException happened when launching nodes with SSH");
+                logger.error("IOException happened when adding node " + node.getNodeName() +
+                        " executing SSH command " + sshCommand);
                 listOfNodesToAdd.remove(node);
             } catch (InterruptedException e) {
-                logger.error("Interrupted Exception happened when starting ssh command");
+                logger.error("Interrupted Exception happened when adding node " + node.getNodeName() +
+                        " executing SSH command " + sshCommand);
                 listOfNodesToAdd.remove(node);
             }
         }
@@ -236,6 +249,8 @@ public class ECS implements IECSClient {
                 String nodePath = getZKNodePath(node);
                 Stat exists = zk.exists(nodePath, false);
                 if (exists != null) {
+                    logger.debug("Setting node " + node.getNodeName() + ", zkPath: " + nodePath +
+                            ", metadata: " + metadata.toString());
                     zk.setData(nodePath, metadataBytes, exists.getVersion());
                     List<String> zNodeChildList = zk.getChildren(nodePath, false);
                     for (String  child : zNodeChildList) {
@@ -277,10 +292,12 @@ public class ECS implements IECSClient {
         return true;
     }
 
+    // Remove nodes by node names
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
         List<IECSNode> listOfNodesToRemove = new ArrayList<>();
 
+        // if the node's name is in the nodeNames collection, add to listOfNodesToRemove
         for (Map.Entry<String, IECSNode> nodeEntry : initNodes.entrySet()) {
             IECSNode node = nodeEntry.getValue();
             if (nodeNames.contains(node.getNodeName())) {
@@ -288,6 +305,8 @@ public class ECS implements IECSClient {
             }
         }
 
+        // if the nodes that are getting removed are currently ACTIVE, needs to redistribute
+        // the data they have
         List<IECSNode> listOfNodesToRedistribute = new ArrayList<>();
         for (IECSNode node : listOfNodesToRemove) {
             if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
@@ -296,11 +315,12 @@ public class ECS implements IECSClient {
         }
         redistributeData(listOfNodesToRedistribute);
 
+        // broadcast SHUTDOWN message to the listOfNodesToRemove
         ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToRemove);
         KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.SHUT_DOWN);
         broadcaster.broadcast(adminMsg);
 
-        //TODO: might be wrong
+        // TODO: might be wrong
         for (IECSNode node : listOfNodesToRemove) {
             if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
                 node.setStatus(ECSNode.ServerStatus.OFFLINE);

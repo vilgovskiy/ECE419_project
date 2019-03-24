@@ -344,7 +344,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             serverSocket = new ServerSocket(port);
             this.port = getPort();
             logger.info("Server " + name + " listening on the port " + port);
-            this.replicationManager = new ReplicationManager(name, getHostname(), this.port );
+            this.replicationManager = new ReplicationManager(name, getHostname(), this.port);
             return true;
         } catch (IOException e) {
             logger.error("Server " + name + " Cannot open server socket!");
@@ -508,7 +508,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             String json = new String(hashRing);
             updateMetadata(json);
         } catch (InterruptedException | KeeperException e) {
-            logger.debug("Server " + name + " unable to get metadata info");
+            logger.debug("Server " + name + " unable to get metadata info from zookeeper");
             e.printStackTrace();
         }
     }

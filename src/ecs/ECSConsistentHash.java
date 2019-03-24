@@ -1,6 +1,7 @@
 package ecs;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.log4j.Logger;
 
 import java.util.*;
@@ -11,8 +12,7 @@ public class ECSConsistentHash {
 
     private SortedMap<String, IECSNode> ring = new TreeMap<>();
 
-    public ECSConsistentHash(){
-    }
+    public ECSConsistentHash(){ }
 
     public ECSConsistentHash(String input){
         updateConsistentHash(input);
@@ -20,21 +20,24 @@ public class ECSConsistentHash {
 
     public void addNode(IECSNode node){
         String nodeHash = node.getNodeHash();
+        logger.debug("HashRing adding node " + node.getNodeName() + " with hash " + nodeHash);
 
         //Find and set previous node for newly added one
         IECSNode prevNode = findPrevNode(nodeHash);
         if (prevNode != null) {
             node.setPrev(prevNode.getNodeHash());
+            logger.debug("Node" + node.getNodeName() +
+                    "'s prevNode: " + prevNode.getNodeName() + " with hash " + prevNode.getNodeHash());
         }
 
         //Find next node and set new one as previous
         IECSNode nextNode = findNextNode(nodeHash);
         if (nextNode != null) {
             nextNode.setPrev(node.getNodeHash());
+            logger.debug("Node " + node.getNodeName() +
+                    "'s nextNode: " + nextNode.getNodeName() + " with hash " + nextNode.getNodeHash());
         }
-        logger.info("HashRing add node " + node.getNodeName() + " with hash " + nodeHash +
-                " ,prevNode: " + prevNode.getNodeName() + " with hash " + prevNode.getNodeHash() +
-                " ,nextNode: " + nextNode.getNodeName() + " with hash " + nextNode.getNodeHash());
+
         ring.put(nodeHash, node);
     }
 
@@ -75,8 +78,13 @@ public class ECSConsistentHash {
         return ring.isEmpty();
     }
 
-    public String serializeHash (){
+    public String serializeHashRing () {
         return new Gson().toJson(ring);
+    }
+
+    public String serializeHashRingPretty () {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        return gson.toJson(ring);
     }
 
     public void updateConsistentHash(String json){
@@ -88,6 +96,7 @@ public class ECSConsistentHash {
             ECSNode node = gson.fromJson(gson.toJson(entry.getValue()), ECSNode.class);
             ring.put(entry.getKey(), node);
         }
+        logger.info("Update hash ring to " + ringRebuilt.toString());
     }
 
     public ECSNode getNodeByKeyHash(String keyHash){
