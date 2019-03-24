@@ -94,7 +94,7 @@ public interface IKVServer {
 	/**
 	 * Check if hashed key is within the key range the server is responsible for
 	 */
-	public boolean inServerKeyRange(String key);
+	public boolean inServerKeyRange(String key, String start, String end);
 
 	/**
 	 * Check if the server is stopped (accepting client requests)

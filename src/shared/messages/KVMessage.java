@@ -16,8 +16,8 @@ public interface KVMessage {
 		SERVER_WRITE_LOCK, /* Server locked for out, only get possible */
  		SERVER_NOT_RESPONSIBLE, /* Request not successful, server not responsible for key */
 
-		REPLICA_PUT /* Put for replication purpose */
-
+		REPLICA_PUT, /* Put for replication purpose */
+		TRANSFER /* KV pair being transferred from another server to this one */
 	}
 
 	/**

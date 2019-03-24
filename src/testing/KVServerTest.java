@@ -54,8 +54,9 @@ public class KVServerTest extends TestCase {
     public void testCheckRange() {
         String json = metadata.serializeHashRing();
         server.updateHashRingMetadata(json);
+        String[] range = server.getRange();
         String hashedKey = "F3909F8C96A9D08E876411C0A212A1F4";
-        assertTrue(server.inServerKeyRange(hashedKey));
+        assertTrue(server.inServerKeyRange(hashedKey, range[0], range[1]));
     }
 
     @Test

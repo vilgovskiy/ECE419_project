@@ -41,7 +41,7 @@ public class ECSConsistentHash {
         ring.put(nodeHash, node);
     }
 
-    private IECSNode findPrevNode(String hash){
+    public IECSNode findPrevNode(String hash){
         IECSNode prevNode = null;
         SortedMap<String, IECSNode> prevNodes = ring.headMap(hash);
         if (!prevNodes.isEmpty()){
@@ -73,6 +73,8 @@ public class ECSConsistentHash {
     public void removeAllNodes(){
         ring.clear();
     }
+
+    public Collection<IECSNode> getAllNodes() { return ring.values(); }
 
     public boolean empty(){
         return ring.isEmpty();

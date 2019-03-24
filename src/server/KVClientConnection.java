@@ -103,6 +103,18 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
             return response;
         }
 
+        // if the message is a data transfer, then the KV server will write the KV pair
+        if (msg.getStatus().equals(KVMessage.StatusType.TRANSFER)) {
+            try {
+                logger.info("Server " + kvServer.getServerName() + " received transfer, writing KV pair");
+                response = kvServer.putKV(msg.getKey(), msg.getValue());
+            } catch (Exception e) {
+                logger.error("Server " + kvServer.getServerName() + " failed at operation " + msg.getStatus() +
+                        " for key " + msg.getKey());
+                e.printStackTrace();
+            }
+        }
+
         // if KVserver is not responsible for the key PUT and replica operations (GET, REPLICA_PUT) then
         // respond SERVER_NOT_RESPONSIBLE
         if (!checkIfResponsible(msg)) {
