@@ -25,7 +25,19 @@ public class ServerReplicator extends AbstractCommunication {
         nodePort = node.getNodePort();
     }
 
-    public void replicatePut(KVMessage message) throws Exception {
+    // connect to designated replica node
+    public void connect() {
+        try {
+            this.socket = new Socket(nodeHost, nodePort);
+            this.input = new BufferedInputStream(socket.getInputStream());
+            this.output = new BufferedOutputStream(socket.getOutputStream());
+        } catch (IOException e) {
+            logger.warn("Cannot initialize Server replicator for " + nodeHost + ":" + nodePort);
+        }
+    }
+
+    // send REPLICA_PUT message to designated replica node
+    public void replicaPut(KVMessage message) throws Exception {
         JsonMessage jsonReq = new JsonMessage();
         jsonReq.setKey(message.getKey());
         jsonReq.setValue(message.getValue());
@@ -41,25 +53,15 @@ public class ServerReplicator extends AbstractCommunication {
         jsonResp.deserialize(receiveMessage().getMsg());
 
         if (jsonResp.getStatus().equals(KVMessage.StatusType.PUT_SUCCESS) ||
-            jsonResp.getStatus().equals(KVMessage.StatusType.DELETE_SUCCESS) ||
-            jsonResp.getStatus().equals(KVMessage.StatusType.PUT_UPDATE)) {
+                jsonResp.getStatus().equals(KVMessage.StatusType.DELETE_SUCCESS) ||
+                jsonResp.getStatus().equals(KVMessage.StatusType.PUT_UPDATE)) {
             logger.debug("Replicate PUT Success for " + this.nodeHost +":"+ this.nodePort);
-            return;
         } else {
             throw new Exception("Replicate PUT failed for " + this.nodeHost + ":" + this.nodePort);
         }
     }
 
-    public void connect() {
-        try {
-            this.socket = new Socket(nodeHost, nodePort);
-            this.input = new BufferedInputStream(socket.getInputStream());
-            this.output = new BufferedOutputStream(socket.getOutputStream());
-        } catch (IOException e) {
-            logger.warn("Cannot initialize Server replicator for " + nodeHost + ":" + nodePort);
-        }
-    }
-
+    // close connection to replica node
     public void close() {
         try {
             if (this.socket != null) {
@@ -72,4 +74,6 @@ public class ServerReplicator extends AbstractCommunication {
         }
     }
 
+    public String getNodeHost() { return nodeHost; }
+    public int getNodePort() { return nodePort; }
 }

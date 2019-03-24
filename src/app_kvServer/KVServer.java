@@ -1,6 +1,5 @@
 package app_kvServer;
 
-import com.sun.security.ntlm.Server;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Level;
 import org.apache.zookeeper.*;
@@ -52,7 +51,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
     private Status status;
     private boolean running;
-    public boolean distributed = false;
     private ServerSocket serverSocket;
 
     /* Storage */
@@ -122,14 +120,14 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		// on init, block all client requests
         this.status = Status.STOP;
 
-		// establish connection to Zookeeper host
-        this.distributed = true;
+		// ready to establish connection to Zookeeper host
         this.zkHost = zkHost;
 		this.zkPort = zkPort;
 		this.name = name;
 		this.zkPath = ECS.ZK_SERVER_ROOT + "/" + name;
 		String zkServer = zkHost + ":" + zkPort;
 
+		// connect to zookeeper and retrieve previous cache info
 		connectToZookeeper(zkServer);
         retrieveCacheInfo();
 
@@ -146,7 +144,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
                 }
             }
         } catch (KeeperException | InterruptedException e){
-            logger.error("Server " + name + " unable to retrieve zk children ");
+            logger.error(" unable to retrieve zk children ");
             e.printStackTrace();
         }
 
@@ -200,7 +198,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		if (cache.inCache(key)) {
             responseMsg.setStatus(KVMessage.StatusType.GET_SUCCESS);
 		    responseMsg.setValue(cache.getKV(key));
-
 		} else {
 		    if (inStorage(key)) {
                 try {
@@ -237,7 +234,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         responseMsg.setValue(value);
 
         if (value.isEmpty()) {
-            logger.info("Deleting entry with key: " + key);
+            logger.info("Server " + name + " deleting entry with key: " + key);
 
 			if (cache.inCache(key)) {
 				cache.putKV(key, null);
@@ -245,15 +242,17 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             if (entryExists) {
                 try {
                     storage.write(new KVData(key, ""));
-                    logger.info("Successfully deleted entry with key: " + key);
+                    logger.info("Server " + name + " successfully deleted entry with key: " + key);
                     responseMsg.setStatus(KVMessage.StatusType.DELETE_SUCCESS);
                 } catch (Exception e) {
                     responseMsg.setStatus(KVMessage.StatusType.DELETE_ERROR);
-                    logger.warn("Error while deleting key: " + key + " from storage", e);
+                    logger.warn("Server " + name +
+                            " error while deleting key: " + key + " from storage", e);
                 }
             } else {
                 responseMsg.setStatus(KVMessage.StatusType.DELETE_ERROR);
-                logger.warn("Unable to delete key: " + key + ", the key doesn't exist!");
+                logger.warn("Server " + name + " unable to delete key: "
+                        + key + ", the key doesn't exist!");
             }
         } else {
 			responseMsg.setStatus(KVMessage.StatusType.PUT_ERROR);
@@ -264,13 +263,16 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
 					if (entryExists) {
                         responseMsg.setStatus(KVMessage.StatusType.PUT_UPDATE);
-                        logger.info("Successfully updated <key: " + key + ", value: " + value + ">");
+                        logger.info("Server " + name + " successfully updated <key: "
+                                + key + ", value: " + value + ">");
                     } else {
                         responseMsg.setStatus(KVMessage.StatusType.PUT_SUCCESS);
-                        logger.info("Successfully inserted <key: " + key + ", value: " + value + ">");
+                        logger.info("Server " + name + " successfully inserted <key: "
+                                + key + ", value: " + value + ">");
                     }
             	} catch (Exception e) {
-            	    logger.error("Unable to put <key: " + key + ", value: " + value + "> in storage", e);
+            	    logger.error("Server " + name + " unable to put <key: "
+                            + key + ", value: " + value + "> in storage", e);
             	    responseMsg.setStatus(KVMessage.StatusType.PUT_ERROR);
                 }
 			}
@@ -300,19 +302,19 @@ public class KVServer extends Thread implements IKVServer, Watcher {
                     KVClientConnection connection = new KVClientConnection(this, client);
                     new Thread(connection).start();
 
-                    logger.info("Connected to "
+                    logger.info("Server " + name + " connected to client "
                             + client.getInetAddress().getHostName()
                             + " on port " + client.getPort());
                 } catch (SocketException se) {
-					logger.error("Error! Socket exception during connection. ");
+					logger.error("Server " + name + " Error! Socket exception during connection. ");
 				} catch (IOException e) {
-                    logger.error("Error! " +
+                    logger.error("Server " + name + " Error! " +
                             "Unable to establish connection. \n", e);
                 } catch (Exception e) {
-                    logger.error("Error! Problem occured during connection");
+                    logger.error("Server " + name + " Error! Problem occured during connection");
                 }
             }
-            logger.info("Server is stopped");
+            logger.info("Server " + name + " is stopped");
         }
     }
 
@@ -325,7 +327,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
                 this.replicationManager.clearReplicatorList();
             }
         } catch (IOException e) {
-            logger.error("Failed to close socket!");
+            logger.error("Server " + name + " failed to close socket!");
         }
     }
 
@@ -337,15 +339,15 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     }
 
     private boolean initializeKVServer() {
-        logger.info("Starting KVServer...");
+        logger.info("Server " + name + " Starting KVServer...");
         try {
             serverSocket = new ServerSocket(port);
             this.port = getPort();
-            logger.info("Server listening on the port " + port);
+            logger.info("Server " + name + " listening on the port " + port);
             this.replicationManager = new ReplicationManager(name, getHostname(), this.port );
             return true;
         } catch (IOException e) {
-            logger.error("Cannot open server socket!");
+            logger.error("Server " + name + " Cannot open server socket!");
             if (e instanceof BindException) {
                 logger.error("Port " + port + " is already bound!");
             }
@@ -358,8 +360,11 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		return metadata;
 	}
 
-    public ReplicationManager getReplicationManager(){return replicationManager;}
+    public ReplicationManager getReplicationManager(){
+        return replicationManager;
+    }
 
+    // check if KVserver is responsible for the key's hash
 	@Override
 	public synchronized boolean inServerKeyRange(String key) {
     	if (start.compareTo(end) < 0) {
@@ -368,7 +373,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     		// case where the range wraps around the ring
 			return key.compareTo(start) >= 0 || key.compareTo(end) < 0;
 		}
-
 	}
 
 	@Override
@@ -402,24 +406,24 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	}
 
 	public void lockWrite() {
-		logger.info("Write operations have been locked");
+		logger.info("Server " + name + " write operations have been locked");
 		this.status = Status.LOCK_WRITE;
 	}
 
 	public void unlockWrite() {
 		// Delete keys that were transferred
 		deleteTransferredKeys();
-		logger.info("Write operations have been unlocked");
+		logger.info("Server " + name + " write operations have been unlocked");
 	    this.status = Status.START;
     }
 
 	public void rejectClientRequests() {
-		logger.info("This server is now blocking client requests");
+		logger.info("Server " + name + " is now blocking client requests");
 		this.status = Status.STOP;
 	}
 
 	public void acceptClientRequests() {
-		logger.info("This server is now processing client requests");
+		logger.info("Server " + name + " is now processing client requests");
 		this.status = Status.START;
 	}
 
@@ -429,7 +433,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		try {
 			allKVData = storage.getAllKVData();
 		} catch (Exception e) {
-			logger.error("Could not get all KV Pairs from storage");
+			logger.error("Server " + name + " could not get all KV Pairs from storage");
 		}
 
 		KVStore store = new KVStore(address, port);
@@ -438,7 +442,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		try {
 			store.connect();
 		} catch (Exception e) {
-			logger.error("Could not connect to " + address + ":" + port + "to transfer data");
+			logger.error("Server " + name + " could not connect to " + address + ":" + port + "to transfer data");
 		}
 
 		for (Map.Entry<String, String> entry : allKVData.entrySet()) {
@@ -454,11 +458,10 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 				try {
 					store.put(key, value);
 				} catch (Exception e) {
-					logger.error("Could not send <" + key + "," + value + "> to " + address + ":" + port);
+					logger.error("Server " + name + " could not send <" + key + "," + value + "> to " + address + ":" + port);
 				}
 			}
 		}
-
 		store.disconnect();
 	}
 
@@ -467,7 +470,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 			for (String key : toDelete.keySet()) {
 				putKV(key, "");
 			}
-
 			toDelete.clear();
 		}
 	}
@@ -495,10 +497,10 @@ public class KVServer extends Thread implements IKVServer, Watcher {
                             replicationManager.updateReplicatorList(metadata);
                         }
                     } catch (KeeperException | InterruptedException e) {
-                        logger.error("Unable to update the metadata node");
+                        logger.error("Server " + name + " unable to update the metadata node");
                         e.printStackTrace();
                     } catch (IOException ioe) {
-                        logger.error("Unable to update metadata for replication manager");
+                        logger.error("Server " + name + " unable to update metadata for replication manager");
                         ioe.printStackTrace();
                     }
                 }
@@ -506,20 +508,23 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             String json = new String(hashRing);
             updateMetadata(json);
         } catch (InterruptedException | KeeperException e) {
-            logger.debug("Unable to get metadata info");
+            logger.debug("Server " + name + " unable to get metadata info");
             e.printStackTrace();
         }
     }
 
 	private void retrieveCacheInfo() {
+        logger.debug("Server " + name + " retrieving cache info from zookeeper " + zkHost +":"+ zkPort);
         try {
             if (zk.exists(zkPath, false) != null) {
                 byte[] cacheBytes= zk.getData(zkPath, false, null);
                 String cache = new String(cacheBytes);
+
                 ServerMetadata jsonMetadata = new Gson().fromJson(cache, ServerMetadata.class);
                 this.cacheSize = jsonMetadata.getCacheSize();
                 this.strategy = CacheStrategy.valueOf(jsonMetadata.getCacheStrategy());
-                logger.debug(name + " cache info retrieved from ZK path " + zkPath);
+                logger.debug("Server " + name + " cache info cacheSize: " + cacheSize + " strategy:" + strategy +
+                        " retrieved from ZK " + zkPath);
             } else logger.error("Server " + name + " doesn't exist at ZK path" + zkPath);
         } catch (InterruptedException | KeeperException e) {
             logger.error("Server " + name + " cannot retrieve cache from path " + zkPath);
@@ -529,20 +534,22 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     }
 
 	private void connectToZookeeper(String zkServer) throws IOException {
-        CountDownLatch latch = new CountDownLatch(0);
+        // use countdown latch to only start after zookeeper is connected
+        final CountDownLatch zkLatch = new CountDownLatch(0);
 		zk = new ZooKeeper(zkServer, ECS.ZK_TIMEOUT, new Watcher() {
 			public void process(WatchedEvent event) {
 				if (event.getState().equals(Event.KeeperState.SyncConnected)) {
-					latch.countDown();
+                    zkLatch.countDown();
 				}
 			}
 		});
 
 		try {
 			// wait until we are connected
-			latch.await();
+            zkLatch.await();
+            logger.debug("Server " + name + " connected to zookeeper at "+ zkServer);
 		} catch (InterruptedException e) {
-			logger.error("Error encountered while connecting to zookeeper: "
+			logger.error("Server " + name + " Error encountered while connecting to zookeeper: "
 						+ e.getMessage());
 		}
 	}
@@ -551,7 +558,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	@Override
 	public void process(WatchedEvent event) {
 		List<String> children;
-
 		try {
 			children = zk.getChildren(zkPath, false, null);
 			if (children.isEmpty()) {
@@ -562,7 +568,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
 			String path = zkPath + "/" + children.get(0);
 			if (children.size() > 1) {
-				String errorMsg = (name + " expects only one message, received "
+				String errorMsg = ("Server " + name + " expects only one message, received "
 									+ children.size());
 				logger.error(errorMsg);
 				zk.setData(path, errorMsg.getBytes(), zk.exists(path, false).getVersion());
@@ -630,7 +636,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 					zk.getChildren(zkPath, this, null);
 				}
 			} catch (KeeperException | InterruptedException e) {
-            logger.error("Unable to process the watcher event");
+            logger.error("Server " + name + " unable to process the watcher event");
         }
 	}
 

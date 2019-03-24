@@ -1,6 +1,5 @@
 package server;
 
-import com.sun.security.ntlm.Server;
 import ecs.ECSConsistentHash;
 import ecs.IECSNode;
 import ecs.ECSNode;
@@ -15,50 +14,65 @@ import java.util.Set;
 
 public class ReplicationManager {
     private static Logger logger = Logger.getRootLogger();
-    private IECSNode node;
-    private List<ServerReplicator> replicatorList;
+    private IECSNode coordinator;
+    private List<ServerReplicator> replicationList;
 
     public ReplicationManager(String nodeName, String nodeHost, int nodePort) {
-        this.node = new ECSNode(nodeName, nodeHost, nodePort);
-        this.replicatorList = new ArrayList<>();
+        this.coordinator = new ECSNode(nodeName, nodeHost, nodePort);
+        this.replicationList = new ArrayList<>();
     }
 
+    // update replication list based on new hashring info
     public void updateReplicatorList(ECSConsistentHash consistentHash) throws IOException {
-        IECSNode coordinatorNode = consistentHash.getNodeByNodeName(node.getNodeName());
+        // get coordinator and replicas from hash ring
+        IECSNode coordinatorNode = consistentHash.getNodeByNodeName(coordinator.getNodeName());
         Set<IECSNode> replicaSet = consistentHash.getReplicaNodesByCoordinator(coordinatorNode);
 
-        List<ServerReplicator> newReplicatorList = new ArrayList<>();
+        String logMsg = "Setting up replication. Coordinator: " + coordinator.getNodeName() + " Replicas: ";
+        for (IECSNode node: replicaSet) {
+            logMsg += " " + node.getNodeName() + " ";
+        }
+        logger.info(logMsg);
+
+        // create updated replication list
+        List<ServerReplicator> newReplicationList = new ArrayList<>();
         for (IECSNode replicaNode : replicaSet) {
             ServerReplicator replicator = new ServerReplicator(replicaNode);
-            newReplicatorList.add(replicator);
+            newReplicationList.add(replicator);
         }
 
-        for (ServerReplicator replicator : replicatorList) {
-            if (!newReplicatorList.contains(replicator)) {
+        // if replicator in old replicationlist is not in the updated one
+        // close replicator's connection
+        for (ServerReplicator replicator : replicationList) {
+            if (!newReplicationList.contains(replicator)) {
                 replicator.close();
-                replicatorList.remove(replicator);
+                replicationList.remove(replicator);
             }
         }
 
-        for (ServerReplicator replicator : newReplicatorList) {
-            if (!replicatorList.contains(replicator)) {
+        // add new replicator to replicationList
+        for (ServerReplicator replicator : newReplicationList) {
+            if (!replicationList.contains(replicator)) {
                 replicator.connect();
-                replicatorList.add(replicator);
+                replicationList.add(replicator);
             }
         }
     }
 
-    public void replicate(KVMessage message) throws Exception {
-        for (ServerReplicator replicator : replicatorList) {
-            replicator.replicatePut(message);
+    // send REPLICA_PUT message to replica nodes
+    public void sendReplicaPuts(KVMessage message) throws Exception {
+        logger.info("Sending replica Puts with coordinator " + coordinator.getNodeName());
+        for (ServerReplicator replicator : replicationList) {
+            logger.info("Sending replica puts to " + replicator.getNodeHost() + ":" + replicator.getNodePort());
+            replicator.replicaPut(message);
         }
     }
 
     public void clearReplicatorList() {
-        for (ServerReplicator replicator : replicatorList) {
+        for (ServerReplicator replicator : replicationList) {
             replicator.close();
         }
-        replicatorList.clear();
+        replicationList.clear();
     }
 
 }

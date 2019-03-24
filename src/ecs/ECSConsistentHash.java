@@ -32,7 +32,9 @@ public class ECSConsistentHash {
         if (nextNode != null) {
             nextNode.setPrev(node.getNodeHash());
         }
-
+        logger.info("HashRing add node " + node.getNodeName() + " with hash " + nodeHash +
+                " ,prevNode: " + prevNode.getNodeName() + " with hash " + prevNode.getNodeHash() +
+                " ,nextNode: " + nextNode.getNodeName() + " with hash " + nextNode.getNodeHash());
         ring.put(nodeHash, node);
     }
 
@@ -58,7 +60,8 @@ public class ECSConsistentHash {
         return nextNode;
     }
 
-    public Integer getRingSize(){return ring.size();}
+    public Integer getRingSize(){
+        return ring.size(); }
 
     public IECSNode removeNode(String key){
         return  ring.remove(key);
@@ -73,9 +76,7 @@ public class ECSConsistentHash {
     }
 
     public String serializeHash (){
-        Gson gson = new Gson();
-        String json = gson.toJson(ring);
-        return json;
+        return new Gson().toJson(ring);
     }
 
     public void updateConsistentHash(String json){
@@ -138,7 +139,6 @@ public class ECSConsistentHash {
         IECSNode curr = coordinator;
 
         // use findNextNode to find the N successors after coordinator
-        // TODO: what if the successor is at the end of the ring? Actually findNextNode handles this case
         for (int i = 0 ; i < REPLICATION_NUMBER; i++) {
             IECSNode nextNode = findNextNode(coordinator.getNodeHash());
             // assert that the nextNode's previous node is the curr node
@@ -146,6 +146,9 @@ public class ECSConsistentHash {
             replicaSet.add(nextNode);
             curr = nextNode;
         }
+
+        logger.debug("Replica coordinator " + coordinator.getNodeName()
+                + ", replica nodes" + replicaSet.toString());
         return replicaSet;
     }
 

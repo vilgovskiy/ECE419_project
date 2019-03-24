@@ -30,7 +30,7 @@ public class ECS implements IECSClient {
     public static final String ZK_SERVER_ROOT = "/kv_servers";
     public static final String SERVER_JAR_PATH = "ms2-server.jar";
 
-    // Set of all servers available in the system through config file
+    // Set of all servers available in the system in config file
     private Queue<IECSNode> nodePool = new ConcurrentLinkedQueue<>();
 
     //Holds all currently initialized nodes
@@ -144,7 +144,6 @@ public class ECS implements IECSClient {
         updateMetadata();
         return true;
     }
-
 
     /**
      * Push the metadata(hash ring content) to ZooKeeper z-node
