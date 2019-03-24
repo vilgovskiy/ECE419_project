@@ -96,17 +96,19 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
         JsonMessage response = new JsonMessage();
         response.setKey(msg.getKey());
 
+        // if KVserver is stopped then it cannot handle any requests
         if (kvServer.serverStopped()) {
             logger.info("Server " + kvServer.getServerName() + " stopped, not processing any client requests!");
             response.setStatus(KVMessage.StatusType.SERVER_STOPPED);
             return response;
         }
 
+        // if KVserver is not responsible for the key PUT and replica operations (GET, REPLICA_PUT) then
+        // respond SERVER_NOT_RESPONSIBLE
         if (!checkIfResponsible(msg)) {
+            // set response to NOT_RESPONSIBLE, value to hashRing info
             logger.info("Server " + kvServer.getServerName() + " not responsible for key "
                     + msg.getKey() + " with keyHash" + ECSNode.calculateHash(msg.getKey()));
-
-            // set response to NOT_RESPONSIBLE, value to hashRing info
             response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
             response.setValue(kvServer.getHashRingMetadata().serializeHashRing());
             return response;
@@ -115,7 +117,7 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
         switch (msg.getStatus()) {
             case REPLICA_PUT:
             case PUT: {
-                // if kvserver is write locked, cant handle requests
+                // if KVServer is write locked, cant handle requests
                 if (kvServer.writeLocked()) {
                     logger.info("Server " + kvServer.getServerName() + " Write requests are currently blocked");
                     response.setStatus(KVMessage.StatusType.SERVER_WRITE_LOCK);
@@ -125,10 +127,12 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                 logger.info("Server " + kvServer.getServerName() +
                         " PUT request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
 
-                // if the status is PUT, then it is the coordinator. Send REPLICA_PUT to other replica nodes
                 try {
                     response = kvServer.putKV(msg.getKey(), msg.getValue());
+                    // if the status is PUT, then it is the coordinator. Send REPLICA_PUT to other replica nodes
                     if (msg.getStatus().equals(KVMessage.StatusType.PUT)) {
+                        logger.info("Server " + kvServer.getServerName() + " is coordinator for PUT " +
+                                msg.getKey());
                         replicationManager.sendReplicaPuts(msg);
                     }
                 } catch (Exception e) {
@@ -149,6 +153,7 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
         return response;
     }
 
+    // Check if this KVServer is responsible for key, or any replica operations (GET, REPLICA_PUT) for the key
     private boolean checkIfResponsible(KVMessage msg) {
         String keyHash = ECSNode.calculateHash(msg.getKey());
         ECSConsistentHash hashRingMetadata = kvServer.getHashRingMetadata();
@@ -168,6 +173,8 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
             Set<IECSNode> replicaNodes = hashRingMetadata.getReplicaNodesByCoordinator(responsibleNode);
             for (IECSNode replicaNode : replicaNodes) {
                 if (replicaNode.getNodeName().equals(kvServer.getServerName())) isResponsible = true;
+                logger.info("Server " + kvServer.getServerName() + " responsible for " + msg.getStatus() +
+                        " for key " + msg.getKey());
             }
         }
         return isResponsible;
