@@ -7,6 +7,9 @@ import org.apache.log4j.Logger;
 import java.io.*;
 import java.net.Socket;
 import java.security.MessageDigest;
+import java.util.List;
+import java.util.Arrays;
+import java.util.Set;
 
 import ecs.*;
 import shared.communication.AbstractCommunication;
@@ -15,8 +18,8 @@ import shared.messages.JsonMessage;
 import shared.messages.KVMessage;
 
 import com.google.gson.JsonSyntaxException;
-
 import java.lang.IllegalStateException;
+
 
 
 public class KVClientConnection extends AbstractCommunication implements Runnable {
@@ -88,51 +91,85 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
     }
 
     private JsonMessage processMsg(JsonMessage msg) {
-        JsonMessage response = new JsonMessage();
-        String hashedKey = ECSNode.calculateHash(msg.getKey());
         logger.info("Received message from " + clientSocket.getInetAddress());
 
+        JsonMessage response = new JsonMessage();
+        response.setKey(msg.getKey());
+
         if (kvServer.serverStopped()) {
-            logger.info("Server stopped, not processing any client requests!");
+            logger.info("Server " + kvServer.getServerName() + " stopped, not processing any client requests!");
             response.setStatus(KVMessage.StatusType.SERVER_STOPPED);
             return response;
-        } else if ( kvServer.inServerKeyRange(hashedKey)) {
-            String server = kvServer.getHostname() + ":" + kvServer.getPort();
-            logger.info(server + " not responsible for key " + msg.getKey());
-            response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
+        }
 
-            // Get metadata and send back to client
-            ECSConsistentHash metadata = kvServer.getMetadata();
-            response.setMetadata(metadata.serializeHashRing());
+        if (!checkIfResponsible(msg)) {
+            logger.info("Server " + kvServer.getServerName() + " not responsible for key "
+                    + msg.getKey() + " with keyHash" + ECSNode.calculateHash(msg.getKey()));
+
+            // set response to NOT_RESPONSIBLE, value to hashRing info
+            response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
+            response.setValue(kvServer.getHashRingMetadata().serializeHashRing());
             return response;
         }
 
         switch (msg.getStatus()) {
             case REPLICA_PUT:
             case PUT: {
+                // if kvserver is write locked, cant handle requests
                 if (kvServer.writeLocked()) {
-                    logger.info("Write requests are currently blocked");
+                    logger.info("Server " + kvServer.getServerName() + " Write requests are currently blocked");
                     response.setStatus(KVMessage.StatusType.SERVER_WRITE_LOCK);
-                    break;
+                    return response;
                 }
-                logger.info("PUT request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
-                response = kvServer.putKV(msg.getKey(), msg.getValue());
 
+                logger.info("Server " + kvServer.getServerName() +
+                        " PUT request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
+
+                // if the status is PUT, then it is the coordinator. Send REPLICA_PUT to other replica nodes
                 try {
+                    response = kvServer.putKV(msg.getKey(), msg.getValue());
                     if (msg.getStatus().equals(KVMessage.StatusType.PUT)) {
                         replicationManager.sendReplicaPuts(msg);
                     }
                 } catch (Exception e) {
+                    logger.error("Server " + kvServer.getServerName() + " failed at operation " + msg.getStatus() +
+                            " for key " + msg.getKey());
                     e.printStackTrace();
+                    break;
                 }
                 break;
             }
             case GET:
-                logger.info("GET request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
+                logger.info("Server " + kvServer.getServerName() +
+                        " GET request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
                 response = kvServer.getKV(msg.getKey());
                 break;
             default:
         }
         return response;
+    }
+
+    private boolean checkIfResponsible(KVMessage msg) {
+        String keyHash = ECSNode.calculateHash(msg.getKey());
+        ECSConsistentHash hashRingMetadata = kvServer.getHashRingMetadata();
+
+        // check if server is responsible (PUT) for the key
+        ECSNode responsibleNode = hashRingMetadata.getNodeByKeyHash(keyHash);
+        boolean isResponsible = kvServer.getServerName().equals(responsibleNode.getNodeName());
+
+        // if server is not responsible, check if its responsible for replica operations (GET, REPLICA_PUT)
+        List<KVMessage.StatusType> replicaOperations = Arrays.asList(
+                KVMessage.StatusType.GET,
+                KVMessage.StatusType.REPLICA_PUT
+        );
+
+        // if server's name is in replicaNodes name then it is responsible for replica operations
+        if (replicaOperations.contains(msg.getStatus())) {
+            Set<IECSNode> replicaNodes = hashRingMetadata.getReplicaNodesByCoordinator(responsibleNode);
+            for (IECSNode replicaNode : replicaNodes) {
+                if (replicaNode.getNodeName().equals(kvServer.getServerName())) isResponsible = true;
+            }
+        }
+        return isResponsible;
     }
 }

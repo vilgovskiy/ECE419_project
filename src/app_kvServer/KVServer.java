@@ -58,7 +58,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     private Cache cache;
 
     /* ECS Consistent hash ring */
-	private ECSConsistentHash metadata;
+	private ECSConsistentHash hashRingMetadata;
 	private String start;
     private String end;
 	private Map<String, String> toDelete;
@@ -89,7 +89,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         this.cacheSize = cacheSize;
         this.strategy = CacheStrategy.valueOf(strategy);
         this.status = Status.START;
-		this.metadata = new ECSConsistentHash();
+		this.hashRingMetadata = new ECSConsistentHash();
         if (storage == null ) storage = KVStorage.getInstance();
 
         switch (this.strategy) {
@@ -155,6 +155,10 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     @Override
     public int getPort() {
         return serverSocket.getLocalPort();
+    }
+
+    public String getServerName() {
+        return this.name;
     }
 
     @Override
@@ -356,8 +360,8 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     }
 
 	@Override
-	public ECSConsistentHash getMetadata() {
-		return metadata;
+	public ECSConsistentHash getHashRingMetadata() {
+        return hashRingMetadata;
 	}
 
     public ReplicationManager getReplicationManager(){
@@ -385,14 +389,14 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         return status.equals(Status.LOCK_WRITE);
 	}
 
-	public void updateMetadata(String json) {
+	public void updateHashRingMetadata(String json) {
 		// update metadata
-		this.metadata.updateConsistentHash(json);
+		this.hashRingMetadata.updateConsistentHash(json);
 
 		// update the range this server is responsible for
 		String key = getHostname() + ":" + getPort();
 		String hashedKey = ECSNode.calculateHash(key);
-		IECSNode n = this.metadata.getNodeByKeyHash(hashedKey);
+		IECSNode n = this.hashRingMetadata.getNodeByKeyHash(hashedKey);
 		this.setRange(n.getNodeHashRange());
 	}
 
@@ -428,7 +432,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	}
 
 	private void moveData(String start, String end, String address, int port) {
-		Map<String, String> allKVData = new HashMap<String, String>();
+		Map<String, String> allKVData = new HashMap<>();
 
 		try {
 			allKVData = storage.getAllKVData();
@@ -492,9 +496,9 @@ public class KVServer extends Thread implements IKVServer, Watcher {
                     try {
                         byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, this, null);
                         String json = new String(hashRing);
-                        updateMetadata(json);
+                        updateHashRingMetadata(json);
                         if (replicationManager != null ) {
-                            replicationManager.updateReplicatorList(metadata);
+                            replicationManager.updateReplicatorList(hashRingMetadata);
                         }
                     } catch (KeeperException | InterruptedException e) {
                         logger.error("Server " + name + " unable to update the metadata node");
@@ -506,7 +510,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
                 }
             },null);
             String json = new String(hashRing);
-            updateMetadata(json);
+            updateHashRingMetadata(json);
         } catch (InterruptedException | KeeperException e) {
             logger.debug("Server " + name + " unable to get metadata info from zookeeper");
             e.printStackTrace();
