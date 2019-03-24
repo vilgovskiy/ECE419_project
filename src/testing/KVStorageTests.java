@@ -27,8 +27,8 @@ public class KVStorageTests extends TestCase {
 
     @Test
     public void testKVStorage() {
-        KVStorage storage = KVStorage.getInstance();
-        File storageFile = new File("data");
+        KVStorage storage = KVStorage.getInstance("");
+        File storageFile = new File("_data");
         assert(storageFile.exists());
 
         KVData data1 = new KVData("key", "value");

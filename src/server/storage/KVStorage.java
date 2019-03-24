@@ -19,16 +19,19 @@ public class KVStorage implements IKVStorage {
     private static KVStorage storageInstance = null;
 
     private final ReadWriteLock rwLock = new ReentrantReadWriteLock();
-    private String dataFilePath = "data";
+    private String dataFilePath;
     private long currLength;
 
-    private KVStorage() {
+    private KVStorage(String name) {
+        this.dataFilePath = name + "_data";
         openStorageFile();
         this.currLength = 0;
     }
 
-    public static KVStorage getInstance() {
-        if (storageInstance == null) storageInstance = new KVStorage();
+    public static KVStorage getInstance(String name) {
+        if (storageInstance == null) {
+            storageInstance = new KVStorage(name);
+        }
         return storageInstance;
     }
 
