@@ -11,6 +11,7 @@ import ecs.ECS;
 import logger.LogSetup;
 
 import org.apache.zookeeper.data.Stat;
+import server.KVTransfer;
 import server.ReplicationManager;
 import server.ServerMetadata;
 import server.cache.*;
@@ -446,11 +447,11 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 			logger.error("Server " + name + " could not get all KV Pairs from storage");
 		}
 
-		KVStore store = new KVStore(address, port);
+		KVTransfer transfer = new KVTransfer(address, port);
 
 		// try to connect to the server
 		try {
-			store.connect();
+			transfer.connect();
 		} catch (Exception e) {
 			logger.error("Server " + name + " could not connect to " + address + ":" + port + "to transfer data");
 		}
@@ -466,13 +467,13 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
 				// send data to the server
 				try {
-					store.put(key, value);
+					transfer.put(key, value);
 				} catch (Exception e) {
 					logger.error("Server " + name + " could not send <" + key + "," + value + "> to " + address + ":" + port);
 				}
 			}
 		}
-		store.disconnect();
+		transfer.close();
 	}
 
 	private void deleteTransferredKeys() {
