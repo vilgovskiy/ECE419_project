@@ -685,7 +685,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         try {
 			new LogSetup("logs/server.log", Level.ALL);
 
-            if (args.length != 3 || args.length != 6) {
+            if (args.length != 3 && args.length != 6) {
                 System.out.println("Error! Invalid number of arguments!");
                 System.out.println("Usage: KVServer <port> <cache size> <strategy>!");
 				System.out.println("Usage: KVServer <port> <cache size> <strategy> <name> <zkHost> <zkPort>!");
