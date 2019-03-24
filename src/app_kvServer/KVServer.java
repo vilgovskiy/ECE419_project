@@ -62,7 +62,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	private ECSConsistentHash hashRingMetadata;
 	private String start;
     private String end;
-	private Map<String, String> toDelete;
 
 	/* Zookeeper */
 	private ZooKeeper zk;
@@ -109,7 +108,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		// Non-distributed case
         start = "00000000000000000000000000000000";
         end = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
-        toDelete = new HashMap<>();
 
         logger.info("creating an instance of the KV server...");
     }
@@ -340,7 +338,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     public void close() {
         kill();
         clearCache();
-		deleteTransferredKeys();
     }
 
     private boolean initializeKVServer() {
@@ -422,8 +419,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	}
 
 	public void unlockWrite() {
-		// Delete keys that were transferred
-		deleteTransferredKeys();
 		logger.info("Server " + name + " write operations have been unlocked");
 	    this.status = Status.START;
     }
@@ -462,9 +457,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 			String hashedKey = ECSNode.calculateHash(key);
 
 			if (inServerKeyRange(hashedKey, start, end)) {
-				// add to map of KV pairs to be deleted later
-				this.toDelete.put(key, value);
-
 				// send data to the server
 				try {
 					transfer.put(key, value);
@@ -474,15 +466,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 			}
 		}
 		transfer.close();
-	}
-
-	private void deleteTransferredKeys() {
-    	if (toDelete.size() > 0) {
-			for (String key : toDelete.keySet()) {
-				putKV(key, "");
-			}
-			toDelete.clear();
-		}
 	}
 
 	private boolean checkValidKeyValue(String key, String value) {
