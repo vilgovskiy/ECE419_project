@@ -482,7 +482,9 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         try {
             if (zk.exists(ECS.ZK_ALIVE_PATH, false) != null) {
                 String path = ECS.ZK_ALIVE_PATH + "/" + this.name;
-                zk.create(path, "".getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+                ServerMetadata serverMetadata = new ServerMetadata(cacheSize, strategy.toString());
+                String jsonMetadata = new Gson().toJson(serverMetadata);
+                zk.create(path, jsonMetadata.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
             } else {
                 logger.error("Unable to setup failure detection node - zookeeper alive path does not exist");
             }
@@ -636,6 +638,8 @@ public class KVServer extends Thread implements IKVServer, Watcher {
                     } else {
                         moveData(args.get(0), args.get(1), args.get(2),
                                 Integer.parseInt(args.get(3)));
+                        exists = zk.exists(path, false);
+                        zk.delete(path, exists.getVersion());
                     }
                     break;
             }

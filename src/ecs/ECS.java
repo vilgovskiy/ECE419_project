@@ -2,6 +2,7 @@ package ecs;
 
 
 import app_kvECS.IECSClient;
+import app_kvServer.IKVServer;
 import server.ServerMetadata;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.*;
@@ -103,10 +104,12 @@ public class ECS implements IECSClient {
             }
         }
         // add all the initialized nodes and currently in STOPPED state to hash ring
-        for(IECSNode node : listOfNodesToStart){
+        for(IECSNode node : listOfNodesToStart) {
             hashRing.addNode(node);
         }
-        redistributeData(listOfNodesToStart);
+
+        // initiate reallocation of data for nodes being started
+        redistributeOnStart(listOfNodesToStart);
 
         // Need to broadcast KVadmin message of START to all nodes that are starting
         ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToStart);
@@ -325,9 +328,13 @@ public class ECS implements IECSClient {
         return true;
     }
 
-    // Remove nodes by node names
     @Override
     public boolean removeNodes(Collection<String> nodeNames) {
+        return removeNodes(nodeNames, false);
+    }
+
+    // Remove nodes by node names
+    public boolean removeNodes(Collection<String> nodeNames, boolean crashed) {
         List<IECSNode> listOfNodesToRemove = new ArrayList<>();
 
         // if the node's name is in the nodeNames collection, add to listOfNodesToRemove
@@ -346,12 +353,7 @@ public class ECS implements IECSClient {
                 listOfNodesToRedistribute.add(node);
             }
         }
-        redistributeData(listOfNodesToRedistribute);
-
-        // broadcast SHUTDOWN message to the listOfNodesToRemove
-        ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToRemove);
-        KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.SHUT_DOWN);
-        broadcaster.broadcast(adminMsg);
+        redistributeOnShutdown(listOfNodesToRedistribute);
 
         // TODO: might be wrong
         for (IECSNode node : listOfNodesToRemove) {
@@ -362,6 +364,15 @@ public class ECS implements IECSClient {
                 nodePool.add(node);
             }
         }
+
+        if (!crashed) {
+            // If the nodes are not being removed due to a failure,
+            // broadcast SHUTDOWN message to the listOfNodesToRemove
+            ECSCommunication broadcaster = new ECSCommunication(zk, listOfNodesToRemove);
+            KVAdminMessage adminMsg = new KVAdminMessage(KVAdminMessage.Status.SHUT_DOWN);
+            broadcaster.broadcast(adminMsg);
+        }
+
         updateMetadata();
         return true;
     }
@@ -374,60 +385,112 @@ public class ECS implements IECSClient {
 
     static String getZKNodePath(IECSNode node) { return ZK_SERVER_ROOT + "/" + node.getNodeName(); }
 
-
-    public boolean redistributeData(Collection<IECSNode> targetNodes) {
-        Set<IECSNode> nodesToTransferFrom = new HashSet<>();
-        Set<IECSNode> nodesToTransferTo = new HashSet<>();
-
-        for (IECSNode node : targetNodes) {
-            if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
-                nodesToTransferFrom.add(node);
-            } else if (node.getStatus().equals(ECSNode.ServerStatus.STOP)) {
-                nodesToTransferTo.add(node);
-            }
+    public synchronized void recoverFromFailure(IECSNode node, ServerMetadata metadata) {
+        Collection<IECSNode> allNodes = hashRing.getAllNodes();
+        if (allNodes.contains(node)) {
+            Collection<String> toRemove = new ArrayList<>();
+            toRemove.add(node.getNodeName());
+            removeNodes(toRemove, true);
+            addNode(metadata.getCacheStrategy(), metadata.getCacheSize());
         }
-
-        for (IECSNode node : targetNodes) {
-            if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
-                IECSNode nodeToTransferTo = getNextAvailableNode(node, nodesToTransferFrom);
-                if (nodeToTransferTo != null) {
-                    transferData(node, nodeToTransferTo, node.getNodeHashRange());
-                } else {
-                    logger.warn("No available node to transfer data to...");
-                }
-            } else if (node.getStatus().equals(ECSNode.ServerStatus.STOP)) {
-                IECSNode nodeToTransferFrom = getNextAvailableNode(node, nodesToTransferTo);
-                if (nodeToTransferFrom != null) {
-                    transferData(nodeToTransferFrom, node, node.getNodeHashRange());
-                } else {
-                    logger.warn("No available node to transfer data from to node" + node.getNodeName());
-                }
-            } else {
-                logger.error("Node data redistribution failed");
-            }
-        }
-        return true;
-
     }
 
-
-    public IECSNode getNextAvailableNode(IECSNode node, Set<IECSNode> conditionNodeSet) {
+    private IECSNode getNextAvailableNode(IECSNode node, Set<IECSNode> conditionNodeSet, int n) {
         IECSNode foundNode = node;
+        int numFound = 0;
         int counter = 0;
 
         while(true) {
             foundNode = hashRing.findNextNode(foundNode.getNodeHash());
-            if (!conditionNodeSet.contains(node)) {
+            if (conditionNodeSet.contains(node)) {
+                numFound += 1;
+            }
+
+            if (n == numFound) {
                 return foundNode;
             }
-            if (foundNode.equals(node)) {
-                return null;
-            }
+
             counter += 1;
             if (2 * hashRing.getRingSize() < counter ) { return null; }
         }
     }
 
+    private IECSNode getPrevAvailableNode(IECSNode node, Set<IECSNode> conditionNodeSet, int n) {
+        IECSNode foundNode = node;
+        int numFound = 0;
+        int counter = 0;
+
+        while(true) {
+            foundNode = hashRing.findPrevNode(foundNode.getNodeHash());
+            if (conditionNodeSet.contains(node)) {
+                numFound += 1;
+            }
+
+            if (n == numFound) {
+                return foundNode;
+            }
+
+            counter += 1;
+            if (2 * hashRing.getRingSize() < counter ) { return null; }
+        }
+    }
+
+    private boolean redistributeOnStart(Collection<IECSNode> targetNodes) {
+        Set<IECSNode> nodesToTransferFrom = new HashSet<>();
+        Collection<IECSNode> allNodes = hashRing.getAllNodes();
+
+        for (IECSNode node : allNodes) {
+            if (node.getStatus().equals(ECSNode.ServerStatus.ACTIVE)) {
+                nodesToTransferFrom.add(node);
+            }
+        }
+
+        for (IECSNode node : targetNodes) {
+            IECSNode nodeToTransferFrom = getNextAvailableNode(node, nodesToTransferFrom, 1);
+            if (nodeToTransferFrom != null) {
+                String start = getPrevAvailableNode(node, new HashSet<>(allNodes), 3).getNodeHash();
+                String end = node.getNodeHash();
+                String[] range = new String[]{start, end};
+                transferData(nodeToTransferFrom, node, range);
+            } else {
+                logger.warn("No available node to transfer data to node " + node.getNodeName());
+            }
+        }
+        return true;
+    }
+
+    private boolean redistributeOnShutdown(Collection<IECSNode> targetNodes) {
+        Set<IECSNode> allNodes = new HashSet<>(hashRing.getAllNodes());
+        Set<IECSNode> shutDownNodes = new HashSet<>(targetNodes);
+        Set<IECSNode> liveNodes = new HashSet<>();
+
+        for (IECSNode node : allNodes) {
+            if (shutDownNodes.contains(node)) {
+                liveNodes.add(node);
+            }
+        }
+
+        for (IECSNode node : liveNodes) {
+            String start = getPrevAvailableNode(node, liveNodes, 3).getNodeHash();
+            String end = getPrevAvailableNode(node, allNodes, 3).getNodeHash();
+
+            if (!start.equals(end)) {
+                fetchData(node, start, end);
+            }
+        }
+
+        return true;
+    }
+
+    private void fetchData(IECSNode node, String start, String end) {
+        IECSNode prev = hashRing.getNodeByKeyHash(end);
+        Set<IECSNode> allNodes = new HashSet<>(hashRing.getAllNodes());
+        while (!start.equals(end)) {
+            transferData(prev, node, new String[]{start, end});
+            prev = getPrevAvailableNode(node, allNodes, 1);
+            end = prev.getNodeHash();
+        }
+    }
 
     private boolean transferData(IECSNode src, IECSNode dst, String[] nodeHashRange) {
         String dstHost = dst.getNodeHost();
@@ -474,8 +537,13 @@ public class ECS implements IECSClient {
             if (attempts == MAX_ATTEMPTS) {
                 throw new Exception();
             } else {
+                // get cache info from server node
+                byte[] metadataBytes = zk.getData(path, false, exists);
+                String metadataJson = new String(metadataBytes);
+                ServerMetadata serverMetadata = new Gson().fromJson(metadataJson, ServerMetadata.class);
+
                 // launch the failure detector for this node
-                Watcher detector = new ECSFailureDetector(this, node);
+                Watcher detector = new ECSFailureDetector(this, node, serverMetadata);
                 zk.getData(path, detector, exists);
             }
         } catch (KeeperException | InterruptedException e) {
