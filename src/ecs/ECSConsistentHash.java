@@ -55,8 +55,8 @@ public class ECSConsistentHash {
     public IECSNode findNextNode(String hash){
         IECSNode nextNode = null;
         SortedMap<String, IECSNode> nextNodes = ring.tailMap(hash);
-        if (!nextNodes.isEmpty()){
-            nextNode = nextNodes.get(nextNodes.firstKey());
+        if (nextNodes.size() > 1){
+            nextNode = nextNodes.get(nextNodes.keySet().toArray()[1]);
         } else if (!(nextNodes = ring.headMap(hash)).isEmpty()){
             nextNode = nextNodes.get(nextNodes.firstKey());
         }
