@@ -1,6 +1,7 @@
 package ecs;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import org.apache.log4j.Logger;
 
 import java.util.*;
@@ -11,8 +12,7 @@ public class ECSConsistentHash {
 
     private SortedMap<String, IECSNode> ring = new TreeMap<>();
 
-    public ECSConsistentHash(){
-    }
+    public ECSConsistentHash(){ }
 
     public ECSConsistentHash(String input){
         updateConsistentHash(input);
@@ -20,17 +20,22 @@ public class ECSConsistentHash {
 
     public void addNode(IECSNode node){
         String nodeHash = node.getNodeHash();
+        logger.debug("HashRing adding node " + node.getNodeName() + " with hash " + nodeHash);
 
         //Find and set previous node for newly added one
         IECSNode prevNode = findPrevNode(nodeHash);
         if (prevNode != null) {
             node.setPrev(prevNode.getNodeHash());
+            logger.debug("Node" + node.getNodeName() +
+                    "'s prevNode: " + prevNode.getNodeName() + " with hash " + prevNode.getNodeHash());
         }
 
         //Find next node and set new one as previous
         IECSNode nextNode = findNextNode(nodeHash);
         if (nextNode != null) {
             nextNode.setPrev(node.getNodeHash());
+            logger.debug("Node " + node.getNodeName() +
+                    "'s nextNode: " + nextNode.getNodeName() + " with hash " + nextNode.getNodeHash());
         }
 
         ring.put(nodeHash, node);
@@ -58,7 +63,8 @@ public class ECSConsistentHash {
         return nextNode;
     }
 
-    public Integer getRingSize(){return ring.size();}
+    public Integer getRingSize(){
+        return ring.size(); }
 
     public IECSNode removeNode(String key){
         return  ring.remove(key);
@@ -72,10 +78,13 @@ public class ECSConsistentHash {
         return ring.isEmpty();
     }
 
-    public String serializeHash (){
-        Gson gson = new Gson();
-        String json = gson.toJson(ring);
-        return json;
+    public String serializeHashRing () {
+        return new Gson().toJson(ring);
+    }
+
+    public String serializeHashRingPretty () {
+        Gson gson = new GsonBuilder().setPrettyPrinting().create();
+        return gson.toJson(ring);
     }
 
     public void updateConsistentHash(String json){
@@ -87,6 +96,7 @@ public class ECSConsistentHash {
             ECSNode node = gson.fromJson(gson.toJson(entry.getValue()), ECSNode.class);
             ring.put(entry.getKey(), node);
         }
+        logger.info("Update hash ring to " + ringRebuilt.toString());
     }
 
     public ECSNode getNodeByKeyHash(String keyHash){
@@ -138,7 +148,6 @@ public class ECSConsistentHash {
         IECSNode curr = coordinator;
 
         // use findNextNode to find the N successors after coordinator
-        // TODO: what if the successor is at the end of the ring?
         for (int i = 0 ; i < REPLICATION_NUMBER; i++) {
             IECSNode nextNode = findNextNode(coordinator.getNodeHash());
             // assert that the nextNode's previous node is the curr node
@@ -146,6 +155,9 @@ public class ECSConsistentHash {
             replicaSet.add(nextNode);
             curr = nextNode;
         }
+
+        logger.debug("Replica coordinator " + coordinator.getNodeName()
+                + ", replica nodes" + replicaSet.toString());
         return replicaSet;
     }
 

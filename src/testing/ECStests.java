@@ -40,7 +40,7 @@ public class ECStests extends TestCase {
         hashRing.addNode(node1);
         hashRing.addNode(node2);
 
-        String serialized = hashRing.serializeHash();
+        String serialized = hashRing.serializeHashRing();
         Gson gson = new Gson();
         Object result = gson.fromJson(serialized, SortedMap.class);
         SortedMap<String, ECSNode> ringRebuilt = (SortedMap<String, ECSNode>) result;
@@ -58,7 +58,7 @@ public class ECStests extends TestCase {
         hashRing.addNode(node1);
         hashRing.addNode(node2);
 
-        String serializedRing = hashRing.serializeHash();
+        String serializedRing = hashRing.serializeHashRing();
 
         ECSConsistentHash hashRing2 = new ECSConsistentHash();
         hashRing2.updateConsistentHash(serializedRing);
@@ -70,7 +70,7 @@ public class ECStests extends TestCase {
     @Test
     public void testSerializeEmptyHashRing(){
         ECSConsistentHash hashRing = new ECSConsistentHash();
-        String serialized = hashRing.serializeHash();
+        String serialized = hashRing.serializeHashRing();
         assertTrue(!serialized.isEmpty());
 
         ECSConsistentHash hashRing2 = new ECSConsistentHash();

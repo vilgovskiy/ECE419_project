@@ -82,6 +82,17 @@ public class ECSClient implements Runnable {
                     nodeList.remove(0);
                     result = ecsClient.removeNodes(nodeList);
                     break;
+                case "ringInfo":
+                    String ringInfo = this.ecsClient.getHashRingInfo();
+                    result = true;
+                    printStatus(ringInfo);
+                    break;
+
+                case "nodesInfo":
+                    String nodesInfo = this.ecsClient.getAllNodesInfo();
+                    result = true;
+                    printStatus(nodesInfo);
+                    break;
                 case "help":
                     printHelp();
                     result = true;

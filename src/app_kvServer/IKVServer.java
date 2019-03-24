@@ -1,6 +1,7 @@
 package app_kvServer;
 
 import ecs.*;
+import server.ReplicationManager;
 import shared.messages.JsonMessage;
 
 public interface IKVServer {
@@ -108,5 +109,15 @@ public interface IKVServer {
 	/**
 	 * Get the metadata from the server
 	 */
-	public ECSConsistentHash getMetadata();
+	public ECSConsistentHash getHashRingMetadata();
+
+    /**
+     * Get the access to server replication manager
+     */
+    public ReplicationManager getReplicationManager();
+
+    /*
+     * Get server name
+     */
+    public String getServerName();
 }
