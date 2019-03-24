@@ -13,8 +13,9 @@ import shared.messages.JsonMessage;
 import shared.messages.TextMessage;
 
 import org.apache.log4j.Logger;
-
 import java.io.IOException;
+import java.util.Set;
+
 
 public class KVStore extends AbstractCommunication implements KVCommInterface {
 
@@ -22,9 +23,9 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	private boolean running;
 	private String address;
 	private int port;
-	private ECSConsistentHash ecsHashRing;
-
 	private Socket clientSocket;
+
+	private ECSConsistentHash ecsHashRing;
 
 	/**
 	 * Initialize KVStore with address and port of KVServer
@@ -34,7 +35,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	public KVStore(String address, int port) {
 		this.address = address;
 		this.port = port;
-		ECSNode newNode = new ECSNode("node-1", this.address, this.port);
+		ECSNode newNode = new ECSNode("server-1", this.address, this.port);
 		ecsHashRing = new ECSConsistentHash();
 		ecsHashRing.addNode(newNode);
 	}
@@ -59,7 +60,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 			input = new BufferedInputStream(clientSocket.getInputStream());
 			output = new BufferedOutputStream(clientSocket.getOutputStream());
 			setRunning(true);
-			logger.info("connection established");
+			logger.info("connection established at " + address + ":" + port);
 		}
 	}
 
@@ -84,9 +85,11 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		ECSNode correctServer = ecsHashRing.getNodeByKeyHash(keyhash);
 		String correctHost = correctServer.getNodeHost();
 		int correctPort = correctServer.getNodePort();
-		if ( !this.address.equals(correctHost) || this.port != correctPort) {
+
+		if (!(this.address.equals(correctHost) && this.port != correctPort)) {
 			this.address = correctHost;
 			this.port = correctPort;
+			logger.info("Now connecting to correct server at " + this.address + ":" + this.port);
 			disconnect();
 			connect();
 		}
@@ -101,10 +104,14 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 			this.address = correctServer.getNodeHost();
 			this.port = correctServer.getNodePort();
 
-			logger.info("NotResponsibleResponse, now connecting to host " + this.address + ":" + this.port);
+			logger.debug("Key hash: " + keyHash);
+			logger.info("NotResponsibleResponse, now connecting to host " + this.address + ":" + this.port
+						+ " with keyHashRange " + correctServer.getNodeHashRange()[0] +
+						" ~ " + correctServer.getNodeHashRange()[1]);
 
 			disconnect();
 			connect();
+
 			if (req.getStatus().equals(KVMessage.StatusType.GET)) {
 				return this.get(req.getKey());
 			} else if (req.getStatus().equals(KVMessage.StatusType.PUT)) {

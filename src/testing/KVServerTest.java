@@ -38,7 +38,7 @@ public class KVServerTest extends TestCase {
 
     @Test
     public void testUpdateMetadata() {
-        String json = metadata.serializeHash();
+        String json = metadata.serializeHashRing();
         server.updateMetadata(json);
         String[] range = server.getRange();
 
@@ -52,7 +52,7 @@ public class KVServerTest extends TestCase {
 
     @Test
     public void testCheckRange() {
-        String json = metadata.serializeHash();
+        String json = metadata.serializeHashRing();
         server.updateMetadata(json);
         String hashedKey = "F3909F8C96A9D08E876411C0A212A1F4";
         assertTrue(server.inServerKeyRange(hashedKey));
@@ -108,7 +108,7 @@ public class KVServerTest extends TestCase {
 
     @Test
     public void testServerResponsible() {
-        String json = metadata.serializeHash();
+        String json = metadata.serializeHashRing();
         server.updateMetadata(json);
 
         // server is responsible for range
@@ -126,6 +126,4 @@ public class KVServerTest extends TestCase {
             store.disconnect();
         }
     }
-
-
 }

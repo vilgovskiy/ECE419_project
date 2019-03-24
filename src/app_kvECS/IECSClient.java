@@ -72,4 +72,8 @@ public interface IECSClient {
      * Get the specific node responsible for the given key
      */
     public IECSNode getNodeByKey(String Key);
+
+    public String getHashRingInfo();
+
+    public String getAllNodesInfo();
 }

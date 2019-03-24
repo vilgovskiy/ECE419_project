@@ -37,5 +37,11 @@ public class ServerMetadata {
     public String getCacheStrategy() { return cacheStrategy; }
 
     public Integer getCacheSize() { return cacheSize; }
+
+    @Override
+    public String toString() {
+        return hostname + ":" + serverPort + " cacheStrategy: " + cacheStrategy
+                + " cacheSize: " + cacheSize;
+    }
 }
 

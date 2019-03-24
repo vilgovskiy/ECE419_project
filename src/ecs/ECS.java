@@ -49,7 +49,7 @@ public class ECS implements IECSClient {
             String[] tokens = cur.split(" ");
             ECSNode node = new ECSNode(tokens[0], tokens[1], Integer.parseInt(tokens[2]));
             nodePool.add(node);
-            logger.debug("Server at " + tokens[0] + ":" + tokens[1] + " added to nodePool");
+            logger.debug("Server " + tokens[0] + " at " + tokens[1] + ":" + tokens[2] + " added to nodePool");
         }
 
         final CountDownLatch latch = new CountDownLatch(0);
@@ -68,6 +68,25 @@ public class ECS implements IECSClient {
         }
         updateMetadata();
         logger.info("ECS initialized at zookeeper " + ZK_IP + ":" + ZK_PORT);
+    }
+
+    @Override
+    public String getHashRingInfo() {
+        return this.hashRing.serializeHashRingPretty();
+    }
+
+    @Override
+    public String getAllNodesInfo() {
+        Map<String, ECSNode.ServerStatus> allNodesInfo = new HashMap<>();
+
+        for (IECSNode node : nodePool) {
+            allNodesInfo.put(node.getNodeName(), node.getStatus());
+        }
+
+        for (IECSNode node : initNodes.values()) {
+            allNodesInfo.put(node.getNodeName(), node.getStatus());
+        }
+        return allNodesInfo.toString();
     }
 
     @Override
@@ -341,6 +360,7 @@ public class ECS implements IECSClient {
 
     static String getZKNodePath(IECSNode node) { return ZK_SERVER_ROOT + "/" + node.getNodeName(); }
 
+
     public boolean redistributeData(Collection<IECSNode> targetNodes) {
         Set<IECSNode> nodesToTransferFrom = new HashSet<>();
         Set<IECSNode> nodesToTransferTo = new HashSet<>();
@@ -368,11 +388,14 @@ public class ECS implements IECSClient {
                 } else {
                     logger.warn("No available node to transfer data from to node" + node.getNodeName());
                 }
-            } else { logger.error("Node data redistribution failed"); }
+            } else {
+                logger.error("Node data redistribution failed");
+            }
         }
         return true;
 
     }
+
 
     public IECSNode getNextAvailableNode(IECSNode node, Set<IECSNode> conditionNodeSet) {
         IECSNode foundNode = node;
@@ -390,6 +413,7 @@ public class ECS implements IECSClient {
             if (2 * hashRing.getRingSize() < counter ) { return null; }
         }
     }
+
 
     private boolean transferData(IECSNode src, IECSNode dst, String[] nodeHashRange) {
         String dstHost = dst.getNodeHost();

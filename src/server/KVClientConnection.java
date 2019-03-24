@@ -103,7 +103,7 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
 
             // Get metadata and send back to client
             ECSConsistentHash metadata = kvServer.getMetadata();
-            response.setMetadata(metadata.serializeHash());
+            response.setMetadata(metadata.serializeHashRing());
             return response;
         }
 
