@@ -17,8 +17,8 @@ public class ServerReplicator extends AbstractCommunication {
     private String nodeHost = "127.0.0.1";
     private int nodePort;
     private Socket socket;
-    private BufferedInputStream input;
-    private BufferedOutputStream output;
+//    private BufferedInputStream input;
+//    private BufferedOutputStream output;
 
     public ServerReplicator(IECSNode node) {
         nodeHost = node.getNodeHost();
