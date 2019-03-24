@@ -374,7 +374,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
     // check if KVserver is responsible for the key's hash
 	@Override
-	public synchronized boolean inServerKeyRange(String key) {
+	public synchronized boolean inServerKeyRange(String key, String start, String end) {
     	if (start.compareTo(end) < 0) {
 			return key.compareTo(start) >= 0 && key.compareTo(end) < 0;
 		} else {
@@ -460,7 +460,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 			String value = entry.getValue();
 			String hashedKey = ECSNode.calculateHash(key);
 
-			if (hashedKey.compareTo(start) >= 0 && hashedKey.compareTo(end) < 0) {
+			if (inServerKeyRange(hashedKey, start, end)) {
 				// add to map of KV pairs to be deleted later
 				this.toDelete.put(key, value);
 
