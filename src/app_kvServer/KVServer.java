@@ -147,9 +147,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             logger.error(" unable to retrieve zk children ");
             e.printStackTrace();
         }
-
-		// set watch for metadata
-        setUpHashRingMetadata();
 	}
 
     @Override
@@ -347,7 +344,9 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         try {
             serverSocket = new ServerSocket(port);
             this.port = getPort();
-            logger.info("Server " + name + " listening on the port " + port);
+            logger.info("Server " + name + " listening on "+ getHostname() + ":" + getPort());
+            // set watch for metadata
+            setUpHashRingMetadata();
             this.replicationManager = new ReplicationManager(name, getHostname(), this.port);
             return true;
         } catch (IOException e) {
@@ -401,8 +400,10 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	}
 
 	private synchronized void setRange(String[] range) {
-		this.start = range[0];
-		this.end = range[1];
+        if (range != null) {
+            this.start = range[0];
+            this.end = range[1];
+        }
 	}
 
 	public synchronized String[] getRange() {
