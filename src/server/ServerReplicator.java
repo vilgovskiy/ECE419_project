@@ -21,7 +21,7 @@ public class ServerReplicator extends AbstractCommunication {
     private BufferedOutputStream output;
 
     public ServerReplicator(IECSNode node) {
-        nodeHost = node.getNodeName();
+        nodeHost = node.getNodeHost();
         nodePort = node.getNodePort();
     }
 
