@@ -102,6 +102,9 @@ public class ECSConsistentHash {
     }
 
     public ECSNode getNodeByKeyHash(String keyHash){
+        if (ring.isEmpty()){
+            return null;
+        }
         // get the node that has hashValue larger or equal than keyHash
         SortedMap<String, IECSNode> greaterThanOrEq = ring.tailMap(keyHash);
         String upperBound;

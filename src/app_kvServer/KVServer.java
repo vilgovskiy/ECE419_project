@@ -184,7 +184,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         setUpFailureDetection();
 
 		// set watch for metadata
-        setUpHashRingMetadata();
+//        setUpHashRingMetadata();
 	}
 
     @Override
@@ -382,7 +382,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             logger.info("Server " + name + " listening on "+ getHostname() + ":" + serverSocket.getLocalPort());
 
             // set watch for metadata
-            //setUpHashRingMetadata();
+            setUpHashRingMetadata();
             this.replicationManager = new ReplicationManager(name, getHostname(), this.port);
             return true;
         } catch (IOException e) {
@@ -432,7 +432,9 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		String key = getHostname() + ":" + getPort();
 		String hashedKey = ECSNode.calculateHash(key);
 		IECSNode n = this.hashRingMetadata.getNodeByKeyHash(hashedKey);
-		this.setRange(n.getNodeHashRange());
+		if (n != null) {
+            this.setRange(n.getNodeHashRange());
+        }
 	}
 
 	private synchronized void setRange(String[] range) {
