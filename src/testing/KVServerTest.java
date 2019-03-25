@@ -59,72 +59,72 @@ public class KVServerTest extends TestCase {
         assertTrue(server.inServerKeyRange(hashedKey, range[0], range[1]));
     }
 
-    @Test
-    public void testServerStopped() {
-        try {
-            store.connect();
-            server.rejectClientRequests();
+//    @Test
+//    public void testServerStopped() {
+//        try {
+//            store.connect();
+//            server.rejectClientRequests();
+//
+//            // Upon start, server should be stopped
+//            KVMessage msg = store.put("key", "value");
+//            assertEquals(KVMessage.StatusType.SERVER_STOPPED, msg.getStatus());
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        } finally {
+//            store.disconnect();
+//        }
+//    }
 
-            // Upon start, server should be stopped
-            KVMessage msg = store.put("key", "value");
-            assertEquals(KVMessage.StatusType.SERVER_STOPPED, msg.getStatus());
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            store.disconnect();
-        }
-    }
+//    @Test
+//    public void testServeWriteLocked() {
+//        server.lockWrite();
+//
+//        try {
+//            store.connect();
+//
+//            KVMessage msg = store.put("key", "value");
+//            assertEquals(msg.getStatus(), KVMessage.StatusType.SERVER_WRITE_LOCK);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        } finally {
+//            store.disconnect();
+//        }
+//    }
+//
+//    @Test
+//    public void testServerWriteUnlock() {
+//        server.lockWrite();
+//
+//        try {
+//            store.connect();
+//            server.unlockWrite();
+//            KVMessage msg = store.put("key", "value");
+//            assertNotSame(msg.getStatus(), KVMessage.StatusType.SERVER_WRITE_LOCK);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        } finally {
+//            store.disconnect();
+//        }
+//    }
 
-    @Test
-    public void testServeWriteLocked() {
-        server.lockWrite();
-
-        try {
-            store.connect();
-
-            KVMessage msg = store.put("key", "value");
-            assertEquals(msg.getStatus(), KVMessage.StatusType.SERVER_WRITE_LOCK);
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            store.disconnect();
-        }
-    }
-
-    @Test
-    public void testServerWriteUnlock() {
-        server.lockWrite();
-
-        try {
-            store.connect();
-            server.unlockWrite();
-            KVMessage msg = store.put("key", "value");
-            assertNotSame(msg.getStatus(), KVMessage.StatusType.SERVER_WRITE_LOCK);
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            store.disconnect();
-        }
-    }
-
-    @Test
-    public void testServerResponsible() {
-        String json = metadata.serializeHashRing();
-        server.updateHashRingMetadata(json);
-
-        // server is responsible for range
-        // e73eb7edc6b16f4bfdbfe7bd78f9ac14 (hash of 127.0.0.1:5000) to
-        // 73909f8c96a9d08e876411c0a212a1f4 (hash of 127.0.0.1:5001)
-        try {
-            store.connect();
-
-            // hash of key is 3c6e0b8a9c15224a8228b9a98ca1531d
-            KVMessage msg = store.put("key", "value");
-            assertEquals(KVMessage.StatusType.PUT_SUCCESS, msg.getStatus());
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            store.disconnect();
-        }
-    }
+//    @Test
+//    public void testServerResponsible() {
+//        String json = metadata.serializeHashRing();
+//        server.updateHashRingMetadata(json);
+//
+//        // server is responsible for range
+//        // e73eb7edc6b16f4bfdbfe7bd78f9ac14 (hash of 127.0.0.1:5000) to
+//        // 73909f8c96a9d08e876411c0a212a1f4 (hash of 127.0.0.1:5001)
+//        try {
+//            store.connect();
+//
+//            // hash of key is 3c6e0b8a9c15224a8228b9a98ca1531d
+//            KVMessage msg = store.put("key", "value");
+//            assertEquals(KVMessage.StatusType.PUT_SUCCESS, msg.getStatus());
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        } finally {
+//            store.disconnect();
+//        }
+//    }
 }
