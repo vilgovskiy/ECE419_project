@@ -11,6 +11,7 @@ import ecs.ECS;
 import logger.LogSetup;
 
 import org.apache.zookeeper.data.Stat;
+import server.KVTransfer;
 import server.ReplicationManager;
 import server.ServerMetadata;
 import server.cache.*;
@@ -61,7 +62,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	private ECSConsistentHash hashRingMetadata;
 	private String start;
     private String end;
-	private Map<String, String> toDelete;
 
 	/* Zookeeper */
 	private ZooKeeper zk;
@@ -142,7 +142,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		// Non-distributed case
         start = "00000000000000000000000000000000";
         end = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
-        toDelete = new HashMap<>();
 
         logger.info("creating an instance of the KV server...");
     }
@@ -182,33 +181,11 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             e.printStackTrace();
         }
 
-        try {
-            byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, new Watcher() {
-                // update metadata
-                public void process(WatchedEvent we) {
-                    try {
-                        byte[] hashRing = zk.getData(ECS.ZK_METADATA_PATH, this, null);
-                        String jsonRing = new String(hashRing);
-                        hashRingMetadata = new ECSConsistentHash(jsonRing);
-                        if (replicationManager != null ) {
-                            replicationManager.updateReplicatorList(hashRingMetadata);
-                        }
-                    } catch (KeeperException | InterruptedException e) {
-                        logger.error("Server unable to update the metadata node");
-                        e.printStackTrace();
-                    } catch (IOException ioe) {
-                        logger.error("Server unable to update metadata for replication manager");
-                        ioe.printStackTrace();
-                    }
-                }
-            },null);
+        // set up failure detection
+        setUpFailureDetection();
 
-            String jsonRing = new String(hashRing);
-            hashRingMetadata = new ECSConsistentHash(jsonRing);
-        } catch (InterruptedException | KeeperException e) {
-            logger.debug("Server " + name + " unable to get metadata info from zookeeper");
-            e.printStackTrace();
-        }
+		// set watch for metadata
+        setUpHashRingMetadata();
 	}
 
     @Override
@@ -395,7 +372,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
     public void close() {
         kill();
         clearCache();
-		deleteTransferredKeys();
     }
 
     private boolean initializeKVServer() {
@@ -430,7 +406,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
     // check if KVserver is responsible for the key's hash
 	@Override
-	public synchronized boolean inServerKeyRange(String key) {
+	public synchronized boolean inServerKeyRange(String key, String start, String end) {
     	if (start.compareTo(end) < 0) {
 			return key.compareTo(start) >= 0 && key.compareTo(end) < 0;
 		} else {
@@ -477,8 +453,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	}
 
 	public void unlockWrite() {
-		// Delete keys that were transferred
-		deleteTransferredKeys();
 		logger.info("Server " + name + " write operations have been unlocked");
 	    this.status = Status.START;
     }
@@ -502,11 +476,11 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 			logger.error("Server " + name + " could not get all KV Pairs from storage");
 		}
 
-		KVStore store = new KVStore(address, port);
+		KVTransfer transfer = new KVTransfer(address, port);
 
 		// try to connect to the server
 		try {
-			store.connect();
+			transfer.connect();
 		} catch (Exception e) {
 			logger.error("Server " + name + " could not connect to " + address + ":" + port + "to transfer data");
 		}
@@ -516,28 +490,16 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 			String value = entry.getValue();
 			String hashedKey = ECSNode.calculateHash(key);
 
-			if (hashedKey.compareTo(start) >= 0 && hashedKey.compareTo(end) < 0) {
-				// add to map of KV pairs to be deleted later
-				this.toDelete.put(key, value);
-
+			if (inServerKeyRange(hashedKey, start, end)) {
 				// send data to the server
 				try {
-					store.put(key, value);
+					transfer.put(key, value);
 				} catch (Exception e) {
 					logger.error("Server " + name + " could not send <" + key + "," + value + "> to " + address + ":" + port);
 				}
 			}
 		}
-		store.disconnect();
-	}
-
-	private void deleteTransferredKeys() {
-    	if (toDelete.size() > 0) {
-			for (String key : toDelete.keySet()) {
-				putKV(key, "");
-			}
-			toDelete.clear();
-		}
+		transfer.close();
 	}
 
 	private boolean checkValidKeyValue(String key, String value) {
@@ -549,6 +511,21 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	private boolean isRunning() {
 		return this.running;
 	}
+
+	private void setUpFailureDetection() {
+        try {
+            if (zk.exists(ECS.ZK_ALIVE_PATH, false) != null) {
+                String path = ECS.ZK_ALIVE_PATH + "/" + this.name;
+                ServerMetadata serverMetadata = new ServerMetadata(cacheSize, strategy.toString());
+                String jsonMetadata = new Gson().toJson(serverMetadata);
+                zk.create(path, jsonMetadata.getBytes(), ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL);
+            } else {
+                logger.error("Unable to setup failure detection node - zookeeper alive path does not exist");
+            }
+        } catch (KeeperException | InterruptedException e) {
+            logger.error("Unable to set up failure detection node");
+        }
+    }
 
 	private void setUpHashRingMetadata() {
         try {
@@ -695,6 +672,8 @@ public class KVServer extends Thread implements IKVServer, Watcher {
                     } else {
                         moveData(args.get(0), args.get(1), args.get(2),
                                 Integer.parseInt(args.get(3)));
+                        exists = zk.exists(path, false);
+                        zk.delete(path, exists.getVersion());
                     }
                     break;
             }
