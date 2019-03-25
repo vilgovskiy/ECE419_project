@@ -111,7 +111,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         // Non-distributed case
         start = "00000000000000000000000000000000";
         end = "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF";
-        toDelete = new HashMap<>();
 
         logger.info("creating an instance of the KV server...");
     }
