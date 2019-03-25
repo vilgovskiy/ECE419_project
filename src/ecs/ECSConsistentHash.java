@@ -22,6 +22,8 @@ public class ECSConsistentHash {
         String nodeHash = node.getNodeHash();
         logger.debug("HashRing adding node " + node.getNodeName() + " with hash " + nodeHash);
 
+        ring.put(nodeHash, node);
+
         //Find and set previous node for newly added one
         IECSNode prevNode = findPrevNode(nodeHash);
         if (prevNode != null) {
@@ -37,8 +39,6 @@ public class ECSConsistentHash {
             logger.debug("Node " + node.getNodeName() +
                     "'s nextNode: " + nextNode.getNodeName() + " with hash " + nextNode.getNodeHash());
         }
-
-        ring.put(nodeHash, node);
     }
 
     private IECSNode findPrevNode(String hash){
@@ -110,17 +110,17 @@ public class ECSConsistentHash {
         } else {
             upperBound = greaterThanOrEq.firstKey();
         }
-        ECSNode currNode = (ECSNode) ring.get(upperBound);
+        return (ECSNode) ring.get(upperBound);
 
-        if (ring.size() == 1) {
-            // only one node in hash ring, return it
-            return currNode;
-        } else if (upperBound.compareTo(keyHash) == 0) {
-            // if keyHash == node's Hash, then return since it's inclusive
-            return currNode;
-        } else {
-            return (ECSNode) ring.get(currNode.getPrevNode());
-        }
+//        if (ring.size() == 1) {
+//            // only one node in hash ring, return it
+//            return currNode;
+//        } else if (upperBound.compareTo(keyHash) == 0) {
+//            // if keyHash == node's Hash, then return since it's inclusive
+//            return currNode;
+//        } else {
+//            return (ECSNode) ring.get(currNode.getPrevNode());
+//        }
     }
 
     public ECSNode getNodeByNodeName(String nodeName) {
@@ -149,7 +149,7 @@ public class ECSConsistentHash {
 
         // use findNextNode to find the N successors after coordinator
         for (int i = 0 ; i < REPLICATION_NUMBER; i++) {
-            IECSNode nextNode = findNextNode(coordinator.getNodeHash());
+            IECSNode nextNode = findNextNode(curr.getNodeHash());
             // assert that the nextNode's previous node is the curr node
             assert nextNode.getPrevNode().equals(curr.getNodeHash());
             replicaSet.add(nextNode);
