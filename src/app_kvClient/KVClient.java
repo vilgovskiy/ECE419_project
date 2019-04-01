@@ -118,7 +118,17 @@ public class KVClient implements IKVClient, Runnable {
                     printError("Invalid number of parameters!");
                 }
                 break;
-
+            case "sql":
+                if (store != null && store.isRunning()) {
+                    String stmt = cmdLine.substring(4);
+                    try {
+                        KVMessage resp = store.sql(stmt);
+                        if (resp != null) printSQLKVMessage(resp);
+                    } catch (Exception e) {
+                        printError("SQL statement failed!");
+                    }
+                }
+                break;
             case "logLevel":
                 if(token.length == 2) {
                     String level = setLevel(token[1]);
@@ -247,6 +257,16 @@ public class KVClient implements IKVClient, Runnable {
         } else {
             System.out.println(msg.getStatus() + " <" +
                     msg.getKey() + ", " + msg.getValue() + ">");
+        }
+    }
+
+    private void printSQLKVMessage(KVMessage msg) {
+        if (msg.getStatus().equals(KVMessage.StatusType.SQL_ERROR)) {
+            System.out.println(msg.getStatus() + "<" +
+                    msg.getKey() + ">");
+        } else {
+            System.out.println(msg.getStatus() + "<" + msg.getKey() + ">"+ "\n"
+            + msg.getValue());
         }
     }
 

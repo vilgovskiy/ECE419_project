@@ -115,16 +115,18 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
             }
         }
 
-        // if KVserver is not responsible for the key PUT and replica operations (GET, REPLICA_PUT) then
+        // if KVServer is not responsible for the key PUT and replica operations (GET, REPLICA_PUT) then
         // respond SERVER_NOT_RESPONSIBLE
-        if (!checkIfResponsible(msg)) {
-            // set response to NOT_RESPONSIBLE, value to hashRing info
-            logger.info("Server " + kvServer.getServerName() + " not responsible for key "
-                    + msg.getKey() + " with keyHash" + ECSNode.calculateHash(msg.getKey()));
-            response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
-            response.setMetadata(kvServer.getHashRingMetadata().serializeHashRing());
-            logger.debug(kvServer.getHashRingMetadata().serializeHashRingPretty());
-            return response;
+        if (msg.getStatus() != KVMessage.StatusType.SQL) {
+            if (!checkIfResponsible(msg)) {
+                // set response to NOT_RESPONSIBLE, value to hashRing info
+                logger.info("Server " + kvServer.getServerName() + " not responsible for key "
+                        + msg.getKey() + " with keyHash" + ECSNode.calculateHash(msg.getKey()));
+                response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
+                response.setMetadata(kvServer.getHashRingMetadata().serializeHashRing());
+                logger.debug(kvServer.getHashRingMetadata().serializeHashRingPretty());
+                return response;
+            }
         }
 
         switch (msg.getStatus()) {
@@ -160,6 +162,12 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                 logger.info("Server " + kvServer.getServerName() +
                         " GET request for {\"key\": " + msg.getKey() + ", \"value\": " + msg.getValue() + "}");
                 response = kvServer.getKV(msg.getKey());
+                break;
+
+            case SQL:
+                logger.info("Server " + kvServer.getServerName() +
+                        " executing SQL statement " + msg.getKey());
+                response = kvServer.sql(msg.getKey());
                 break;
             default:
         }

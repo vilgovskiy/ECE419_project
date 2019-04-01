@@ -86,7 +86,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		String correctHost = correctServer.getNodeHost();
 		int correctPort = correctServer.getNodePort();
 
-		if (!(this.address.equals(correctHost) && this.port != correctPort)) {
+		if (!(this.address.equals(correctHost) && this.port == correctPort)) {
 			this.address = correctHost;
 			this.port = correctPort;
 			logger.info("Now connecting to correct server at " + this.address + ":" + this.port);
@@ -144,6 +144,19 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 
 		JsonMessage jsonReq = new JsonMessage(KVMessage.StatusType.GET, key, "");
 		reconnectToCorrectServer(jsonReq);
+		TextMessage req = new TextMessage(jsonReq.serialize());
+		sendMessage(req);
+		TextMessage resp = receiveMessage();
+		JsonMessage jsonResp = new JsonMessage();
+		jsonResp.deserialize(resp.getMsg());
+		return resendForNotResponsibleResp(jsonReq, jsonResp);
+	}
+
+	@Override
+	public KVMessage sql(String sql) throws Exception {
+		logger.info("Executing SQL statement " + sql);
+		JsonMessage jsonReq = new JsonMessage(KVMessage.StatusType.SQL, sql, "");
+
 		TextMessage req = new TextMessage(jsonReq.serialize());
 		sendMessage(req);
 		TextMessage resp = receiveMessage();

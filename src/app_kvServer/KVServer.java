@@ -15,6 +15,8 @@ import server.KVTransfer;
 import server.ReplicationManager;
 import server.ServerMetadata;
 import server.cache.*;
+import server.sql.SQLExecutor;
+import server.sql.SQLStorage;
 import server.storage.*;
 import server.KVClientConnection;
 import shared.messages.JsonMessage;
@@ -72,6 +74,9 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 	/* Replication */
     private ReplicationManager replicationManager;
 
+    /* SQL */
+    private SQLStorage sqlStorage;
+
     /**
      * Start KV Server at given port
      *
@@ -93,6 +98,9 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         this.hashRingMetadata = new ECSConsistentHash();
         if (storage == null ) {
             storage = new KVStorage("storage");
+        }
+        if (sqlStorage == null) {
+            sqlStorage = new SQLStorage("storage");
         }
 
         switch (this.strategy) {
@@ -123,6 +131,9 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		this.hashRingMetadata = new ECSConsistentHash();
         if (storage == null ) {
             storage = new KVStorage(storageFileName);
+        }
+        if (sqlStorage == null) {
+            sqlStorage = new SQLStorage("storage");
         }
 
         switch (this.strategy) {
@@ -312,6 +323,81 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             	    responseMsg.setStatus(KVMessage.StatusType.PUT_ERROR);
                 }
 			}
+        }
+        return responseMsg;
+    }
+
+
+    @Override
+    public JsonMessage sql(String sql) {
+        JsonMessage responseMsg = new JsonMessage();
+        responseMsg.setKey(sql);
+
+        String[] sqlStrings = sql.split("\\s+");
+        String actionType = sqlStrings[0];
+        SQLExecutor executor = new SQLExecutor(sqlStorage);
+
+        switch(actionType) {
+            case "select":
+            case "SELECT":
+                List<String> queryResult = executor.query(sql);
+                if (queryResult != null) {
+                    responseMsg.setValue(String.join("\n", queryResult));
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_SUCCESS);
+                } else {
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_ERROR);
+                }
+                break;
+
+            case "create":
+            case "CREATE":
+                boolean result = executor.create(sql);
+                if (result) {
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_SUCCESS);
+                } else {
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_ERROR);
+                }
+                break;
+
+            case "insert":
+            case "INSERT":
+                result = executor.insert(sql);
+                if (result) {
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_SUCCESS);
+                } else {
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_ERROR);
+                }
+                break;
+
+            case "delete":
+            case "DELETE":
+                result = executor.delete(sql);
+                if (result) {
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_SUCCESS);
+                } else {
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_ERROR);
+                }
+                break;
+
+            case "drop":
+            case "DROP":
+                result = executor.drop(sql);
+                if (result) {
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_SUCCESS);
+                } else {
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_ERROR);
+                }
+                break;
+
+            case "update":
+            case "UPDATE":
+                result = executor.create(sql);
+                if (result) {
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_SUCCESS);
+                } else {
+                    responseMsg.setStatus(KVMessage.StatusType.SQL_ERROR);
+                }
+                break;
         }
         return responseMsg;
     }

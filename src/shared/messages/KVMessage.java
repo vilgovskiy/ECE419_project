@@ -17,7 +17,12 @@ public interface KVMessage {
  		SERVER_NOT_RESPONSIBLE, /* Request not successful, server not responsible for key */
 
 		REPLICA_PUT, /* Put for replication purpose */
-		TRANSFER /* KV pair being transferred from another server to this one */
+		TRANSFER, /* KV pair being transferred from another server to this one */
+
+		SQL,
+		REPLICA_SQL,
+		SQL_ERROR,
+		SQL_SUCCESS
 	}
 
 	/**

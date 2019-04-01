@@ -120,4 +120,6 @@ public interface IKVServer {
      * Get server name
      */
     public String getServerName();
+
+    public JsonMessage sql(String sql);
 }

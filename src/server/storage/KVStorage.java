@@ -31,7 +31,6 @@ public class KVStorage implements IKVStorage {
         this.currLength = 0;
     }
 
-
     private void openStorageFile() {
         logger.info("creating data file at " + dataFilePath + "...");
         File storageFile = new File(dataFilePath);
@@ -55,14 +54,6 @@ public class KVStorage implements IKVStorage {
         }
         assert(!storageFile.exists());
         openStorageFile();
-    }
-
-    public long getCurrLength() {
-        return currLength;
-    }
-
-    public String getDataFilePath() {
-        return dataFilePath;
     }
 
     @Override
@@ -172,8 +163,6 @@ public class KVStorage implements IKVStorage {
             rwLock.readLock().unlock();
         }
     }
-
-
 
     // Directly read the file from index using seek, can only be called by get in cache operation
     @Override
