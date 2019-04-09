@@ -100,7 +100,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
             storage = new KVStorage("storage");
         }
         if (sqlStorage == null) {
-            sqlStorage = new SQLStorage("storage");
+            sqlStorage = new SQLStorage("storage_db");
         }
 
         switch (this.strategy) {
@@ -123,17 +123,18 @@ public class KVServer extends Thread implements IKVServer, Watcher {
         logger.info("creating an instance of the KV server...");
     }
 
-    public KVServer(int port, int cacheSize, String strategy, String storageFileName) {
+    public KVServer(int port, int cacheSize, String strategy, String name) {
         this.port = port;
+        this.name = name;
         this.cacheSize = cacheSize;
         this.strategy = CacheStrategy.valueOf(strategy);
         this.status = Status.START;
 		this.hashRingMetadata = new ECSConsistentHash();
         if (storage == null ) {
-            storage = new KVStorage(storageFileName);
+            storage = new KVStorage("storage");
         }
         if (sqlStorage == null) {
-            sqlStorage = new SQLStorage("storage");
+            sqlStorage = new SQLStorage("storage_db");
         }
 
         switch (this.strategy) {
@@ -166,7 +167,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 		// ready to establish connection to Zookeeper host
         this.zkHost = zkHost;
 		this.zkPort = zkPort;
-		this.name = name;
 		this.zkPath = ECS.ZK_SERVER_ROOT + "/" + name;
 		String zkServer = zkHost + ":" + zkPort;
 
@@ -193,9 +193,6 @@ public class KVServer extends Thread implements IKVServer, Watcher {
 
         // set up failure detection
         setUpFailureDetection();
-
-		// set watch for metadata
-//        setUpHashRingMetadata();
 	}
 
     @Override

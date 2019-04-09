@@ -34,7 +34,7 @@ public class ECS implements IECSClient {
 
     public static final Integer MAX_ATTEMPTS = 10;
     public static final String SERVER_JAR_PATH = new File(System.getProperty("user.dir"),
-            "m2-server.jar").toString();
+            "m4-server.jar").toString();
 
 
 

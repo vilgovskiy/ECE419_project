@@ -6,12 +6,13 @@ import org.apache.log4j.Logger;
 
 import java.io.*;
 import java.net.Socket;
-import java.security.MessageDigest;
+
 import java.util.List;
 import java.util.Arrays;
 import java.util.Set;
 
 import ecs.*;
+import server.sql.SQLParser;
 import shared.communication.AbstractCommunication;
 import shared.messages.TextMessage;
 import shared.messages.JsonMessage;
@@ -117,17 +118,21 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
 
         // if KVServer is not responsible for the key PUT and replica operations (GET, REPLICA_PUT) then
         // respond SERVER_NOT_RESPONSIBLE
-        if (msg.getStatus() != KVMessage.StatusType.SQL) {
-            if (!checkIfResponsible(msg)) {
-                // set response to NOT_RESPONSIBLE, value to hashRing info
+        if (!checkIfResponsible(msg)) {
+            // set response to NOT_RESPONSIBLE, value to hashRing info
+            if (msg.getStatus().equals(KVMessage.StatusType.SQL)) {
+                logger.info("Server " + kvServer.getServerName() + " not responsible for key "
+                        + msg.getKey() + " with keyHash" + ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(msg)));
+            } else {
                 logger.info("Server " + kvServer.getServerName() + " not responsible for key "
                         + msg.getKey() + " with keyHash" + ECSNode.calculateHash(msg.getKey()));
-                response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
-                response.setMetadata(kvServer.getHashRingMetadata().serializeHashRing());
-                logger.debug(kvServer.getHashRingMetadata().serializeHashRingPretty());
-                return response;
             }
+            response.setStatus(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE);
+            response.setMetadata(kvServer.getHashRingMetadata().serializeHashRing());
+            logger.debug(kvServer.getHashRingMetadata().serializeHashRingPretty());
+            return response;
         }
+
 
         switch (msg.getStatus()) {
             case REPLICA_PUT:
@@ -176,9 +181,13 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
 
     // Check if this KVServer is responsible for key, or any replica operations (GET, REPLICA_PUT) for the key
     private boolean checkIfResponsible(KVMessage msg) {
-        String keyHash = ECSNode.calculateHash(msg.getKey());
+        String keyHash;
+        if (msg.getStatus() == KVMessage.StatusType.SQL) {
+            keyHash = ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(msg));
+        } else {
+            keyHash = ECSNode.calculateHash(msg.getKey());
+        }
         ECSConsistentHash hashRingMetadata = kvServer.getHashRingMetadata();
-
         // check if server is responsible (PUT) for the key
         ECSNode responsibleNode = hashRingMetadata.getNodeByKeyHash(keyHash);
         boolean isResponsible = kvServer.getServerName().equals(responsibleNode.getNodeName());
@@ -189,13 +198,27 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
                 KVMessage.StatusType.REPLICA_PUT
         );
 
+        if (KVMessage.StatusType.SQL.equals(msg.getStatus()) &&
+                (msg.getKey().contains("SELECT") || msg.getKey().contains("select"))) {
+            Set<IECSNode> replicaNodes = hashRingMetadata.getReplicaNodesByCoordinator(responsibleNode);
+            for (IECSNode replicaNode : replicaNodes) {
+                if (replicaNode.getNodeName().equals(kvServer.getServerName())) {
+                    isResponsible = true;
+                    logger.info("Server " + kvServer.getServerName() + " responsible for " + msg.getStatus() +
+                            " for table " + SQLParser.getTableFromSQLMsg(msg));
+                }
+            }
+        }
+
         // if server's name is in replicaNodes name then it is responsible for replica operations
         if (replicaOperations.contains(msg.getStatus())) {
             Set<IECSNode> replicaNodes = hashRingMetadata.getReplicaNodesByCoordinator(responsibleNode);
             for (IECSNode replicaNode : replicaNodes) {
-                if (replicaNode.getNodeName().equals(kvServer.getServerName())) isResponsible = true;
-                logger.info("Server " + kvServer.getServerName() + " responsible for " + msg.getStatus() +
-                        " for key " + msg.getKey());
+                if (replicaNode.getNodeName().equals(kvServer.getServerName())) {
+                    isResponsible = true;
+                    logger.info("Server " + kvServer.getServerName() + " responsible for " + msg.getStatus() +
+                            " for key " + msg.getKey());
+                }
             }
         }
         return isResponsible;

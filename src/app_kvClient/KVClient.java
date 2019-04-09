@@ -280,7 +280,7 @@ public class KVClient implements IKVClient, Runnable {
 
     public static void main(String[] args) {
         try {
-            new LogSetup("logs/client.log", Level.ALL);
+            new LogSetup("logs/client.log", Level.INFO);
             KVClient cli = new KVClient();
             cli.run();
         } catch (IOException e) {

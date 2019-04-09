@@ -1,0 +1,26 @@
+CREATE TABLE IF NOT EXISTS warehouses ( id integer PRIMARY KEY, name text NOT NULL, capacity real);
+
+INSERT INTO warehouses (name, capacity) VALUES ("warehouse1", "100");
+INSERT INTO warehouses (name, capacity) VALUES ("warehouse2", "200");
+INSERT INTO warehouses (name, capacity) VALUES ("warehouse3", "300");
+INSERT INTO warehouses (name, capacity) VALUES ("warehouse4", "400");
+INSERT INTO warehouses (name, capacity) VALUES ("warehouse5", "500");
+
+SELECT name, capacity FROM warehouses;
+SELECT name, capacity FROM warehouses WHERE capacity > 200;
+
+UPDATE warehouses SET capacity=600 WHERE name='warehouse5';
+
+CREATE TABLE IF NOT EXISTS amznWarehouses ( id integer PRIMARY KEY, name text NOT NULL, capacity real);
+
+INSERT INTO amznWarehouses (name, capacity) VALUES ("amzn1", "100");
+INSERT INTO amznWarehouses (name, capacity) VALUES ("amzn2", "200");
+INSERT INTO amznWarehouses (name, capacity) VALUES ("amzn3", "300");
+INSERT INTO amznWarehouses (name, capacity) VALUES ("amzn4", "400");
+INSERT INTO amznWarehouses (name, capacity) VALUES ("amzn5", "500");
+
+SELECT warehouses.name, amznWarehouses.name FROM warehouses INNER JOIN amznWarehouses ON warehouses.capacity=amznWarehouses.capacity;
+
+DROP TABLE IF EXISTS amznWarehouses;
+
+

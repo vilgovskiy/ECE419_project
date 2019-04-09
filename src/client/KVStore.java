@@ -6,11 +6,11 @@ import java.io.BufferedOutputStream;
 
 import ecs.ECSConsistentHash;
 import ecs.ECSNode;
-import ecs.IECSNode;
 import shared.communication.AbstractCommunication;
 import shared.messages.KVMessage;
 import shared.messages.JsonMessage;
 import shared.messages.TextMessage;
+import server.sql.SQLParser;
 
 import org.apache.log4j.Logger;
 import java.io.IOException;
@@ -81,8 +81,14 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	}
 
 	private void reconnectToCorrectServer(KVMessage req) throws Exception {
-		String keyhash = ECSNode.calculateHash(req.getKey());
-		ECSNode correctServer = ecsHashRing.getNodeByKeyHash(keyhash);
+		String keyHash;
+		if (req.getStatus().equals(KVMessage.StatusType.SQL)) {
+			keyHash = ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(req));
+		} else {
+			keyHash = ECSNode.calculateHash(req.getKey());
+		}
+
+		ECSNode correctServer = ecsHashRing.getNodeByKeyHash(keyHash);
 		String correctHost = correctServer.getNodeHost();
 		int correctPort = correctServer.getNodePort();
 
@@ -97,7 +103,14 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 
 	private KVMessage resendForNotResponsibleResp(KVMessage req, KVMessage resp) throws Exception {
 		if (resp.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
-			String keyHash = ECSNode.calculateHash(req.getKey());
+			String keyHash;
+			if (req.getStatus().equals(KVMessage.StatusType.SQL)) {
+				keyHash = ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(req));
+				//System.out.println("TABLE IS " + SQLParser.getTableFromSQLMsg(req));
+			} else {
+				keyHash = ECSNode.calculateHash(req.getKey());
+			}
+
 			ecsHashRing = new ECSConsistentHash(resp.getMetadata());
 			ECSNode correctServer = ecsHashRing.getNodeByKeyHash(keyHash);
 
@@ -116,6 +129,8 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 				return this.get(req.getKey());
 			} else if (req.getStatus().equals(KVMessage.StatusType.PUT)) {
 				return this.put(req.getKey(), req.getValue());
+			} else if (req.getStatus().equals(KVMessage.StatusType.SQL)) {
+				return this.sql(req.getKey());
 			} else {
 				logger.fatal("Error, not supposed to happen");
 			}
@@ -156,7 +171,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	public KVMessage sql(String sql) throws Exception {
 		logger.info("Executing SQL statement " + sql);
 		JsonMessage jsonReq = new JsonMessage(KVMessage.StatusType.SQL, sql, "");
-
+		reconnectToCorrectServer(jsonReq);
 		TextMessage req = new TextMessage(jsonReq.serialize());
 		sendMessage(req);
 		TextMessage resp = receiveMessage();
