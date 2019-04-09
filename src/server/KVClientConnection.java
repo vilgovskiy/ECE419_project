@@ -122,7 +122,7 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
             // set response to NOT_RESPONSIBLE, value to hashRing info
             if (msg.getStatus().equals(KVMessage.StatusType.SQL)) {
                 logger.info("Server " + kvServer.getServerName() + " not responsible for key "
-                        + msg.getKey() + " with keyHash" + ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(msg)));
+                        + msg.getKey() + " with keyHash" + ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(msg).get(0)));
             } else {
                 logger.info("Server " + kvServer.getServerName() + " not responsible for key "
                         + msg.getKey() + " with keyHash" + ECSNode.calculateHash(msg.getKey()));
@@ -183,7 +183,7 @@ public class KVClientConnection extends AbstractCommunication implements Runnabl
     private boolean checkIfResponsible(KVMessage msg) {
         String keyHash;
         if (msg.getStatus() == KVMessage.StatusType.SQL) {
-            keyHash = ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(msg));
+            keyHash = ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(msg).get(0));
         } else {
             keyHash = ECSNode.calculateHash(msg.getKey());
         }

@@ -809,7 +809,7 @@ public class KVServer extends Thread implements IKVServer, Watcher {
      */
     public static void main(String[] args) {
         try {
-			new LogSetup("logs/server.log", Level.ALL);
+			new LogSetup("logs/server.log", Level.INFO);
 
             if (args.length != 3 && args.length != 6) {
                 System.out.println("Error! Invalid number of arguments!");

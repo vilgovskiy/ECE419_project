@@ -133,7 +133,7 @@ public class ECSClient implements Runnable {
 
     public static void main(String[] args) {
         try {
-            new LogSetup("logs/client.log", Level.ALL);
+            new LogSetup("logs/client.log", Level.INFO);
             ECSClient cli = new ECSClient(args[0]);
             cli.run();
         } catch (IOException e) {

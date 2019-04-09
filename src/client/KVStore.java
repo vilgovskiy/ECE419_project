@@ -83,7 +83,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 	private void reconnectToCorrectServer(KVMessage req) throws Exception {
 		String keyHash;
 		if (req.getStatus().equals(KVMessage.StatusType.SQL)) {
-			keyHash = ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(req));
+			keyHash = ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(req).get(0));
 		} else {
 			keyHash = ECSNode.calculateHash(req.getKey());
 		}
@@ -105,7 +105,7 @@ public class KVStore extends AbstractCommunication implements KVCommInterface {
 		if (resp.getStatus().equals(KVMessage.StatusType.SERVER_NOT_RESPONSIBLE)) {
 			String keyHash;
 			if (req.getStatus().equals(KVMessage.StatusType.SQL)) {
-				keyHash = ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(req));
+				keyHash = ECSNode.calculateHash(SQLParser.getTableFromSQLMsg(req).get(0));
 				//System.out.println("TABLE IS " + SQLParser.getTableFromSQLMsg(req));
 			} else {
 				keyHash = ECSNode.calculateHash(req.getKey());
