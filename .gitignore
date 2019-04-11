@@ -8,5 +8,4 @@ data
 bin/
 logs/
 zookeeper-3.4.13
-server*
 m4-*
